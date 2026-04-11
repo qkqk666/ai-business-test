@@ -8,221 +8,218 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Netlify Forms: 隐藏表单，部署后自动收集提交数据，在 Netlify 后台可查看 -->
+    <!-- Netlify Forms: 隐藏表单，部署后自动在后台收集每条提交 -->
     <form name="quiz-submissions" data-netlify="true" netlify-honeypot="bot-field" hidden>
         <input name="bot-field">
         <input name="phone" type="text">
-        <textarea name="basic-q1"></textarea>
-        <textarea name="basic-a1"></textarea>
-        <textarea name="basic-q2"></textarea>
-        <textarea name="basic-a2"></textarea>
-        <textarea name="basic-q3"></textarea>
-        <textarea name="basic-a3"></textarea>
-        <textarea name="basic-q4"></textarea>
-        <textarea name="basic-a4"></textarea>
-        <textarea name="advanced-q1"></textarea>
-        <textarea name="advanced-a1"></textarea>
+        <textarea name="q1"></textarea>
+        <textarea name="a1"></textarea>
+        <textarea name="q2"></textarea>
+        <textarea name="a2"></textarea>
+        <textarea name="q3"></textarea>
+        <textarea name="a3"></textarea>
+        <textarea name="q4"></textarea>
+        <textarea name="a4"></textarea>
+        <textarea name="q5"></textarea>
+        <textarea name="a5"></textarea>
+        <textarea name="q6"></textarea>
+        <textarea name="a6"></textarea>
         <input name="totalScore" type="text">
+        <input name="level" type="text">
+        <input name="label" type="text">
+        <input name="path" type="text">
         <input name="dimensions" type="text">
-        <input name="talentTags" type="text">
-        <input name="className" type="text">
-        <textarea name="talentSummary"></textarea>
+        <textarea name="evaluation"></textarea>
         <input name="timestamp" type="text">
     </form>
 
     <header>
         <div class="container">
             <div class="header-content">
-                <h1>AI业务天赋速测系统</h1>
-                <div class="badge">5题极速评估</div>
-                <p class="subtitle">零门槛 · 实时分析 · 精准匹配</p>
-                <p>根据回答分析商业思维，匹配最适合的成长路径</p>
+                <h1><i class="fas fa-bolt"></i> AI业务天赋速测</h1>
+                <div class="badge">6题深度评估</div>
+                <p class="subtitle">约束明确 · AI双重判定 · 精准分级</p>
+                <p class="header-desc">每道题考察一个核心维度，AI 逐题判定后生成个性化评语</p>
             </div>
         </div>
     </header>
-    
+
     <main class="container">
-        <!-- 第一部分：测试界面 -->
+        <!-- 答题区 -->
         <section class="section" id="testSection">
-            <h2><i class="fas fa-brain"></i> 天赋速测</h2>
-            <p>请根据第一反应真实回答，系统将实时分析您的商业思维模式。</p>
-            
+            <div class="section-intro">
+                <h2><i class="fas fa-pen-fancy"></i> 开始测评</h2>
+                <p>请认真作答每道题，系统会基于你的<strong>真实思维方式</strong>判定，而非答案长短。</p>
+            </div>
+
             <div class="progress-container">
                 <div id="progressBar" class="progress-bar"></div>
+                <div id="progressText" class="progress-text">0 / 7</div>
             </div>
-            
-            <div class="controls">
-                <h3>随机题目（4基础+1进阶）</h3>
-                <button id="regenerateQuestions" class="btn btn-secondary">
-                    <i class="fas fa-redo"></i> 换题
-                </button>
+
+            <!-- 第1题：本质导向 -->
+            <div class="question-card" id="card_q1">
+                <div class="question-header">
+                    <span class="question-num">01</span>
+                    <span class="question-dim">本质导向</span>
+                </div>
+                <div class="question-text">
+                    一家开了十年的社区面馆，口味不错，但近半年生意下滑。老板觉得是附近新开了三家面馆抢了客人。<br><br>
+                    如果你是他，你会先怀疑哪个<strong>自己店里的根本问题</strong>？<br>
+                    <span class="question-hint">（提示：不是口味、价格、服务）请用一两句话说清楚。</span>
+                </div>
+                <textarea id="answer_1" class="answer-input" rows="3" placeholder="写出你认为的根本问题..." oninput="updateProgress()"></textarea>
             </div>
-            
-            <div id="basicQuestions">
-                <!-- 基础题目由 JavaScript 动态生成 -->
+
+            <!-- 第2题：强逻辑 -->
+            <div class="question-card" id="card_q2">
+                <div class="question-header">
+                    <span class="question-num">02</span>
+                    <span class="question-dim">强逻辑</span>
+                </div>
+                <div class="question-text">
+                    你接手一家业绩下滑的门店，老板给了一堆杂乱信息。<br><br>
+                    你第一步会怎么<strong>组织这些信息</strong>，让自己心里有数？<br>
+                    <span class="question-hint">请用"第一步...第二步...第三步..."的结构回答。</span>
+                </div>
+                <textarea id="answer_2" class="answer-input" rows="4" placeholder="第一步...&#10;第二步...&#10;第三步..." oninput="updateProgress()"></textarea>
             </div>
-            
-            <h3>联系信息（用于后续沟通）</h3>
-            <div id="contactQuestion">
-                <!-- 联系信息题目由 JavaScript 动态生成 -->
+
+            <!-- 第3题：体系重构 -->
+            <div class="question-card" id="card_q3">
+                <div class="question-header">
+                    <span class="question-num">03</span>
+                    <span class="question-dim">体系重构</span>
+                </div>
+                <div class="question-text">
+                    如果让你全权改革一个传统公司的业务流程，你<strong>第一刀会砍掉哪个环节</strong>？<br><br>
+                    <span class="question-hint">为什么非砍它不可？</span>
+                </div>
+                <textarea id="answer_3" class="answer-input" rows="3" placeholder="我会砍掉...因为..." oninput="updateProgress()"></textarea>
             </div>
-            
-            <h3>进阶挑战题</h3>
-            <div id="advancedQuestions">
-                <!-- 进阶题目由 JavaScript 动态生成 -->
+
+            <!-- 第4题：街头洞察 -->
+            <div class="question-card" id="card_q4">
+                <div class="question-header">
+                    <span class="question-num">04</span>
+                    <span class="question-dim">街头洞察</span>
+                </div>
+                <div class="question-text">
+                    你最近一次在线下消费时，有没有哪个细节让你觉得<strong>"这老板很会做生意"</strong>？<br><br>
+                    <span class="question-hint">描述一下那个细节。</span>
+                </div>
+                <textarea id="answer_4" class="answer-input" rows="3" placeholder="我注意到..." oninput="updateProgress()"></textarea>
             </div>
-            
+
+            <!-- 第5题：效率杠杆 -->
+            <div class="question-card" id="card_q5">
+                <div class="question-header">
+                    <span class="question-num">05</span>
+                    <span class="question-dim">效率杠杆</span>
+                </div>
+                <div class="question-text">
+                    如果现在有一个重复性极高的任务（比如整理一千份杂乱表格），你会怎么处理？<br><br>
+                    <span class="question-hint">（提示：是否会用工具或自动化？）描述你的大致思路。</span>
+                </div>
+                <textarea id="answer_5" class="answer-input" rows="3" placeholder="我会..." oninput="updateProgress()"></textarea>
+            </div>
+
+            <!-- 第6题：附加题 - 全能验证 -->
+            <div class="question-card bonus-card" id="card_q6">
+                <div class="question-header">
+                    <span class="question-num">06</span>
+                    <span class="question-dim bonus">附加挑战</span>
+                </div>
+                <div class="question-text">
+                    一家开在老小区的社区食堂，主打低价便民，但经营了三年始终微利。<br><br>
+                    老板想在<strong>不提高价格、不降低分量</strong>的前提下，把利润翻一倍。<br><br>
+                    如果你来操盘，核心思路是什么？<span class="question-hint">请用几句话描述。</span>
+                </div>
+                <textarea id="answer_6" class="answer-input" rows="4" placeholder="我的核心思路是..." oninput="updateProgress()"></textarea>
+            </div>
+
+            <!-- 手机号 -->
+            <div class="question-card phone-card" id="card_phone">
+                <div class="question-header">
+                    <span class="question-num"><i class="fas fa-phone"></i></span>
+                    <span class="question-dim contact">联系方式</span>
+                </div>
+                <div class="question-text">
+                    请留下您的手机号，方便我们后续沟通详细培养方案：
+                </div>
+                <input type="tel" id="contact_phone" class="answer-input phone-input" placeholder="请输入11位手机号码" oninput="updateProgress()">
+                <div class="compact-hint">仅用于课程咨询，不会泄露个人信息</div>
+            </div>
+
+            <!-- 提交按钮 -->
             <div class="button-group">
-                <button id="submitTest" class="btn btn-accent">
-                    <i class="fas fa-play"></i> 提交分析
+                <button id="submitTest" class="btn btn-primary btn-large">
+                    <i class="fas fa-paper-plane"></i> 提交测评
                 </button>
-                <button id="resetTest" class="btn btn-secondary">
-                    <i class="fas fa-redo"></i> 清空
+                <button id="resetTest" class="btn btn-ghost">
+                    <i class="fas fa-redo"></i> 清空所有
                 </button>
             </div>
         </section>
 
         <!-- 加载状态 -->
         <section id="loadingArea" class="section" style="display:none;">
-            <div style="text-align:center; padding: 2rem 0;">
-                <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary); margin-bottom: 1rem;"></i>
-                <p style="color: var(--gray); font-size: 1rem;">AI 正在深度分析您的回答...</p>
-                <p style="color: var(--gray); font-size: 0.85rem; margin-top: 0.5rem;">请稍候，通常需要 3-5 秒</p>
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <p class="loading-title">AI 正在深度分析您的回答...</p>
+                <p class="loading-desc">正在进行五维判定和天赋评语生成，约需 5-10 秒</p>
             </div>
         </section>
-        
-        <!-- 第二部分：分析结果 -->
-        <section id="resultArea" class="section" style="display:none;">
-            <h2><i class="fas fa-chart-bar"></i> 分析结果</h2>
-            <p>基于您的回答，系统已完成天赋分析：</p>
-            
-            <div class="score-display" id="totalScore">0</div>
-            <div class="score-label">综合得分（满分10分）</div>
-            
-            <div class="real-time-analysis">
-                <div class="analysis-title">
-                    <i class="fas fa-chart-line"></i> 详细分析
-                </div>
-                
-                <div class="analysis-item">
-                    <div class="analysis-label">逻辑深度：</div>
-                    <div class="analysis-value" id="logicScore">等待分析...</div>
-                </div>
-                
-                <div class="analysis-item">
-                    <div class="analysis-label">商业嗅觉：</div>
-                    <div class="analysis-value" id="businessScore">等待分析...</div>
-                </div>
-                
-                <div class="analysis-item">
-                    <div class="analysis-label">效率驱动：</div>
-                    <div class="analysis-value" id="efficiencyScore">等待分析...</div>
-                </div>
-                
-                <div class="analysis-item">
-                    <div class="analysis-label">质疑精神：</div>
-                    <div class="analysis-value" id="criticalScore">等待分析...</div>
-                </div>
 
-                <div class="analysis-item">
-                    <div class="analysis-label">策略思维：</div>
-                    <div class="analysis-value" id="strategyScore">等待分析...</div>
-                </div>
-                
-                <div class="analysis-item">
-                    <div class="analysis-label">检测天赋标签：</div>
-                    <div class="analysis-value" id="talentTags">等待分析...</div>
-                </div>
+        <!-- 结果展示 -->
+        <section id="resultArea" class="section" style="display:none;">
+            <h2><i class="fas fa-trophy"></i> 测评结果</h2>
+
+            <!-- 等级大字 -->
+            <div class="result-hero">
+                <div class="result-level" id="resultLevel">--</div>
+                <div class="result-label" id="resultLabel">等待分析</div>
+                <div class="result-path" id="resultPath"></div>
             </div>
-            
-            <div class="talent-summary">
-                <div class="summary-title">
-                    <i class="fas fa-user-check"></i> 天赋总结
-                </div>
-                <div class="summary-content" id="talentSummary">
-                    等待分析...
-                </div>
+
+            <!-- 总分 -->
+            <div class="score-bar">
+                <span class="score-text">加权总分</span>
+                <span class="score-value" id="totalScore">0</span>
+                <span class="score-max">/ 8</span>
             </div>
-            
-            <div id="classRecommendation" style="margin-top: 1.2rem;">
-                <!-- 班级推荐由后端返回后动态生成 -->
+
+            <!-- 五维结果 -->
+            <div class="dimensions-grid" id="dimensionsGrid">
+                <!-- 由 JS 动态生成 -->
             </div>
-            
+
+            <!-- AI 评语 -->
+            <div class="evaluation-box">
+                <div class="evaluation-title">
+                    <i class="fas fa-robot"></i> AI 天赋速评
+                </div>
+                <div class="evaluation-text" id="evaluationText">等待分析...</div>
+            </div>
+
             <div class="contact-note">
                 <i class="fas fa-phone"></i> 我们已记录您的联系方式，将在24小时内与您联系沟通详细培养方案。
             </div>
-        </section>
-        
-        <!-- 第三部分：可折叠的评判标准（默认隐藏） -->
-        <div class="toggle-section" id="toggleCriteria">
-            <h3 style="margin: 0; color: var(--primary); font-size: 0.95rem;">
-                <i class="fas fa-chevron-down"></i> 分班标准（点击展开）
-            </h3>
-        </div>
-        
-        <div class="toggle-content" id="criteriaContent">
-            <section class="section">
-                <h2><i class="fas fa-chart-line"></i> 分班标准</h2>
-                <p>根据测试结果，学员将被分为以下三个层次</p>
-                
-                <div class="criteria-card genius">
-                    <div class="criteria-header">
-                        <div class="criteria-title">天才直通班</div>
-                        <div class="price-tag">免费</div>
-                    </div>
-                    <ul class="criteria-list">
-                        <li>能多维度拆解生意问题</li>
-                        <li>优先分析问题本质</li>
-                        <li>极度排斥重复劳动</li>
-                        <li>不盲从权威，有独立判断</li>
-                    </ul>
-                </div>
-                
-                <div class="criteria-card potential">
-                    <div class="criteria-header">
-                        <div class="criteria-title">潜力实战班</div>
-                        <div class="price-tag">付费</div>
-                    </div>
-                    <ul class="criteria-list">
-                        <li>能给出1-2个合理原因</li>
-                        <li>有基础逻辑但维度单一</li>
-                        <li>对重复工作略有抵触</li>
-                        <li>需外部推动执行</li>
-                    </ul>
-                </div>
-                
-                <div class="criteria-card growth">
-                    <div class="criteria-header">
-                        <div class="criteria-title">陪伴成长班</div>
-                        <div class="price-tag">付费</div>
-                    </div>
-                    <ul class="criteria-list">
-                        <li>问题归因片面单一</li>
-                        <li>解决问题仅用表层方式</li>
-                        <li>对重复工作无抵触</li>
-                        <li>习惯服从安排</li>
-                    </ul>
-                </div>
-            </section>
-        </div>
-        
-        <!-- 操作按钮区域 -->
-        <div class="section">
-            <h2><i class="fas fa-cogs"></i> 操作</h2>
-            <div class="button-group">
-                <button id="startNewTest" class="btn btn-success">
-                    <i class="fas fa-plus-circle"></i> 新测试
-                </button>
-                <button id="downloadReport" class="btn btn-primary">
+
+            <div class="button-group" style="margin-top:1.5rem;">
+                <button id="downloadReport" class="btn btn-secondary">
                     <i class="fas fa-download"></i> 下载报告
                 </button>
+                <button id="startNewTest" class="btn btn-ghost">
+                    <i class="fas fa-plus-circle"></i> 重新测评
+                </button>
             </div>
-        </div>
+        </section>
     </main>
-    
+
     <footer class="container">
         <div class="footer">
-            <p>&copy; 2025 AI业务天赋速测系统 · 5题极速评估</p>
+            <p>&copy; 2025 AI业务天赋速测系统 · 六题深度评估</p>
         </div>
     </footer>
 
