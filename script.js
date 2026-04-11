@@ -233,6 +233,26 @@ function displayResults(r) {
     // AI 评语
     document.getElementById('evaluationText').textContent = r.evaluation;
 
+    // 调试信息（如果 AI 调用失败，显示提示）
+    if (r._debug) {
+        var debugEl = document.getElementById('debugInfo');
+        if (!debugEl) {
+            debugEl = document.createElement('div');
+            debugEl.id = 'debugInfo';
+            debugEl.style.cssText = 'margin-top:12px;padding:10px;background:#fff3cd;border-radius:8px;font-size:13px;color:#856404;';
+            document.querySelector('.evaluation-box').appendChild(debugEl);
+        }
+        if (r._debug.aiError) {
+            debugEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> AI分析未成功（' + r._debug.aiError + '），当前显示模板评语。请检查API密钥配置。';
+            debugEl.style.display = 'block';
+        } else if (r._debug.usedFallback) {
+            debugEl.innerHTML = '<i class="fas fa-info-circle"></i> AI评语部分使用了模板补充。';
+            debugEl.style.display = 'block';
+        } else {
+            debugEl.style.display = 'none';
+        }
+    }
+
     // 显示结果
     document.getElementById('resultArea').style.display = 'block';
     document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth' });

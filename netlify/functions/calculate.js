@@ -1,10 +1,9 @@
 /**
  * ===================================================================
- *  AI业务天赋速测系统 V2 - 后端云函数（保密）
+ *  AI业务天赋速测系统 V2.1 - 后端云函数（保密）
  *  
- *  两步 AI 判定流程：
- *    第一步：调用 DeepSeek-V3 进行五维 + 全能布尔判定（返回 JSON）
- *    第二步：根据判定结果，再调用 AI 生成 150 字天赋速评
+ *  单次 AI 调用：同时输出五维布尔判定 + 天赋速评
+ *  (合并为一次调用以避免 Netlify 10s 超时)
  *  
  *  加权计分：
  *    essence +2, logic +2, rebuild +2, street +1, efficiency +1
@@ -25,7 +24,7 @@ var https = require('https');
 function callAI(systemPrompt, userPrompt) {
   return new Promise(function(resolve, reject) {
     var apiKey = process.env.SILICONFLOW_API_KEY;
-    if (!apiKey) { reject(new Error('未配置 SILICONFLOW_API_KEY')); return; }
+    if (!apiKey) { reject(new Error('MISSING_API_KEY')); return; }
 
     var postData = JSON.stringify({
       model: 'deepseek-ai/DeepSeek-V3',
@@ -33,7 +32,7 @@ function callAI(systemPrompt, userPrompt) {
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: userPrompt }
       ],
-      max_tokens: 800,
+      max_tokens: 1200,
       temperature: 0.3
     });
 
@@ -57,60 +56,79 @@ function callAI(systemPrompt, userPrompt) {
           if (json.choices && json.choices[0] && json.choices[0].message) {
             resolve(json.choices[0].message.content.trim());
           } else if (json.error) {
-            reject(new Error('AI API: ' + (json.error.message || JSON.stringify(json.error))));
+            reject(new Error('API_ERROR: ' + (json.error.message || JSON.stringify(json.error))));
           } else {
-            reject(new Error('AI 返回格式异常'));
+            reject(new Error('UNEXPECTED_FORMAT: ' + data.substring(0, 200)));
           }
-        } catch (e) { reject(new Error('AI 响应解析失败: ' + e.message)); }
+        } catch (e) { reject(new Error('PARSE_FAIL: ' + e.message + ' | raw: ' + data.substring(0, 200))); }
       });
     });
 
-    req.on('error', function(e) { reject(new Error('AI 网络失败: ' + e.message)); });
-    req.setTimeout(25000, function() { req.destroy(); reject(new Error('AI 请求超时')); });
+    req.on('error', function(e) { reject(new Error('NETWORK_FAIL: ' + e.message)); });
+    req.setTimeout(20000, function() { req.destroy(); reject(new Error('TIMEOUT_20s')); });
     req.write(postData);
     req.end();
   });
 }
 
-// ==================== 第一步：五维 + 全能布尔判定 ====================
+// ==================== 合并 Prompt：一次性完成判定 + 评语 ====================
 
-function buildJudgmentPrompt(answers) {
+function buildCombinedPrompt(answers) {
   var a = {};
   for (var i = 0; i < answers.length; i++) {
     a[answers[i].questionId] = answers[i].answer;
   }
 
   var systemPrompt =
-    '你是一位严格的人才评估专家。用户回答了六道开放式问题。请根据以下回答进行判断，只输出JSON，不要任何其他文字。';
+    '你是一位严格的商业人才评估专家。用户回答了六道开放式问题。你需要完成两个任务：先进行六维布尔判定，再写一段天赋速评。严格按照指定格式输出。';
 
   var userPrompt =
+    '=== 用户回答 ===\n' +
     '第1题（本质导向）：' + (a[1] || '') + '\n' +
     '第2题（强逻辑）：' + (a[2] || '') + '\n' +
     '第3题（体系重构）：' + (a[3] || '') + '\n' +
     '第4题（街头洞察）：' + (a[4] || '') + '\n' +
     '第5题（效率杠杆）：' + (a[5] || '') + '\n' +
     '第6题（附加题）：' + (a[6] || '') + '\n\n' +
+    '=== 任务一：六维判定 ===\n' +
     '判断标准：\n' +
-    '- 本质导向(essence)：是否穿透"竞品抢客"表象，指出面馆自身结构问题（老客流失、产品老化、体验陈旧、成本结构等）。仅谈口味/价格/服务为false。\n' +
-    '- 强逻辑(logic)：是否使用"第一步…第二步…"结构且逻辑清晰。笼统无序为false。\n' +
-    '- 体系重构(rebuild)：是否指向改变系统规则或重塑流程（砍整段人工、平台化等）。仅为局部优化为false。\n' +
-    '- 街头洞察(street)：是否包含具体线下商业细节（陈列、动线、话术等），并对消费心理有观察。无具体细节为false。\n' +
-    '- 效率杠杆(efficiency)：是否明确提出使用工具/自动化/AI/脚本/宏等避免手工操作。手工做或找人帮忙为false。\n' +
-    '- 全能验证(allrounder)（针对附加题）：必须同时满足(1)本质穿透（指出利润瓶颈结构性原因如客单价天花板、翻台率、供应链损耗、人效等）、(2)体系重构（改变收入模型如团餐/预制菜/会员，或成本模型如集中采购/中央厨房）、(3)其他三个信号（逻辑组织、街头洞察、效率杠杆）中至少两个为true。全部满足则true，否则false。\n\n' +
-    '输出格式（只输出这个JSON，无任何其他文字）：\n' +
-    '{"essence":true/false,"logic":true/false,"rebuild":true/false,"street":true/false,"efficiency":true/false,"allrounder":true/false}';
+    '- essence（本质导向）：是否穿透"竞品抢客"表象，指出面馆自身结构问题（老客流失、产品老化、体验陈旧、成本结构等）。仅谈口味/价格/服务为false。\n' +
+    '- logic（强逻辑）：是否使用"第一步…第二步…"结构且逻辑清晰。笼统无序为false。\n' +
+    '- rebuild（体系重构）：是否指向改变系统规则或重塑流程（砍整段人工、平台化等）。仅为局部优化为false。\n' +
+    '- street（街头洞察）：是否包含具体线下商业细节（陈列、动线、话术等），并对消费心理有观察。无具体细节为false。\n' +
+    '- efficiency（效率杠杆）：是否明确提出使用工具/自动化/AI/脚本/宏等避免手工操作。手工做或找人帮忙为false。\n' +
+    '- allrounder（全能验证，针对附加题）：必须同时满足(1)本质穿透（指出利润瓶颈结构性原因）、(2)体系重构（改变收入或成本模型）、(3)其他三个信号中至少两个为true。全部满足则true，否则false。\n\n' +
+    '加权计分规则：essence +2, logic +2, rebuild +2, street +1, efficiency +1，满分8。\n' +
+    '分班：>=7且allrounder→SSS级，>=6→S级，3-5→A级，0-2→B级。\n\n' +
+    '=== 任务二：天赋速评 ===\n' +
+    '根据判定结果和分班等级，写150字以内的天赋速评：\n' +
+    '- SSS级：以"极为罕见。"开头，点出五项全能，结论"建议纳入单独培养计划，给予专属资源与导师"。\n' +
+    '- S级：点出"具备稀缺的体系建构能力"，给出岗位方向。\n' +
+    '- A级：指出最强特质和可打磨方向。\n' +
+    '- B级：指出思维盲区并给练习建议。\n' +
+    '语气干脆，不用虚词。\n\n' +
+    '=== 输出格式（严格遵守） ===\n' +
+    '第一行输出JSON：{"essence":true/false,"logic":true/false,"rebuild":true/false,"street":true/false,"efficiency":true/false,"allrounder":true/false}\n' +
+    '第二行空行\n' +
+    '第三行开始输出天赋速评纯文本。\n' +
+    '除此之外不要输出任何其他内容。';
 
   return { systemPrompt: systemPrompt, userPrompt: userPrompt };
 }
 
-function parseJudgmentJSON(text) {
-  // 提取 JSON（AI 可能在前后加文字）
-  var match = text.match(/\{[\s\S]*?\}/);
-  if (!match) throw new Error('无法从AI响应中提取JSON');
+// ==================== 解析合并响应 ====================
 
-  var obj = JSON.parse(match[0]);
-  // 归一化为布尔
-  return {
+function parseCombinedResponse(text) {
+  // 提取 JSON 部分
+  var jsonMatch = text.match(/\{[^}]*"essence"[^}]*\}/);
+  if (!jsonMatch) {
+    // 尝试更宽松的匹配
+    jsonMatch = text.match(/\{[\s\S]*?\}/);
+  }
+  if (!jsonMatch) throw new Error('NO_JSON_FOUND');
+
+  var obj = JSON.parse(jsonMatch[0]);
+  var dims = {
     essence:    obj.essence === true,
     logic:      obj.logic === true,
     rebuild:    obj.rebuild === true,
@@ -118,31 +136,15 @@ function parseJudgmentJSON(text) {
     efficiency: obj.efficiency === true,
     allrounder: obj.allrounder === true
   };
-}
 
-// ==================== 第二步：生成天赋速评 ====================
+  // 提取评语部分（JSON 之后的文本）
+  var jsonEnd = text.indexOf(jsonMatch[0]) + jsonMatch[0].length;
+  var evalText = text.substring(jsonEnd).trim();
 
-function buildEvaluationPrompt(dims, totalScore, level) {
-  var systemPrompt = '你是一位商业天赋评估专家，语气干脆，不用虚词。';
+  // 清理可能的多余标记
+  evalText = evalText.replace(/^[\n\r\s]+/, '').replace(/^===.*===[\n\r\s]*/g, '');
 
-  var userPrompt =
-    '用户在五个维度和附加题的表现：\n' +
-    '- 本质导向：' + dims.essence + '\n' +
-    '- 强逻辑：' + dims.logic + '\n' +
-    '- 体系重构：' + dims.rebuild + '\n' +
-    '- 街头洞察：' + dims.street + '\n' +
-    '- 效率杠杆：' + dims.efficiency + '\n' +
-    '- 附加题全能验证：' + dims.allrounder + '\n' +
-    '加权总分：' + totalScore + '/8，最终等级：' + level + '。\n\n' +
-    '请生成一段150字以内的"天赋速评"。要求：\n' +
-    '1. 若等级为SSS级，以"极为罕见。"开头，点出五项全能，结论"建议纳入单独培养计划，给予专属资源与导师"。\n' +
-    '2. 若等级为S级，点出"具备稀缺的体系建构能力"，给出岗位方向（商业模式设计、业务SOP架构、AI方案规划）。\n' +
-    '3. 若等级为A级，指出最强特质和可打磨方向。\n' +
-    '4. 若等级为B级，指出思维盲区并给练习建议（如：每天追问一个身边服务的运转逻辑）。\n' +
-    '5. 语气干脆，不用虚词。\n\n' +
-    '输出纯文本，无格式。';
-
-  return { systemPrompt: systemPrompt, userPrompt: userPrompt };
+  return { dims: dims, evaluation: evalText };
 }
 
 // ==================== 加权计分 + 分班 ====================
@@ -196,6 +198,8 @@ exports.handler = async function(event, context) {
     return { statusCode: 405, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: '仅支持 POST' }) };
   }
 
+  var debugInfo = { aiCalled: false, aiSuccess: false, aiError: null, usedFallback: false };
+
   try {
     var data = JSON.parse(event.body);
     var answers = data.answers;
@@ -204,30 +208,41 @@ exports.handler = async function(event, context) {
       return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: '答案不完整' }) };
     }
 
-    // ===== 第一步：AI 五维判定 =====
-    var dims;
+    // ===== 单次 AI 调用：判定 + 评语 =====
+    var dims, evaluation;
     try {
-      var jp = buildJudgmentPrompt(answers);
-      var judgmentRaw = await callAI(jp.systemPrompt, jp.userPrompt);
-      console.log('AI判定原始响应:', judgmentRaw);
-      dims = parseJudgmentJSON(judgmentRaw);
-    } catch (aiErr1) {
-      console.error('AI 五维判定失败，使用全 false 降级:', aiErr1.message);
+      debugInfo.aiCalled = true;
+      var cp = buildCombinedPrompt(answers);
+      var rawResponse = await callAI(cp.systemPrompt, cp.userPrompt);
+      console.log('AI原始响应:', rawResponse);
+
+      var parsed = parseCombinedResponse(rawResponse);
+      dims = parsed.dims;
+      evaluation = parsed.evaluation;
+      debugInfo.aiSuccess = true;
+
+      // 如果评语为空，用模板兜底
+      if (!evaluation || evaluation.length < 10) {
+        var tempScore = calculateScore(dims);
+        var tempCls = classify(tempScore, dims.allrounder);
+        evaluation = fallbackEvaluation(dims, tempScore, tempCls);
+        debugInfo.usedFallback = true;
+      }
+
+    } catch (aiErr) {
+      console.error('AI调用失败，全量降级:', aiErr.message);
+      debugInfo.aiError = aiErr.message;
+      debugInfo.usedFallback = true;
       dims = { essence: false, logic: false, rebuild: false, street: false, efficiency: false, allrounder: false };
+      evaluation = null; // 下面会生成
     }
 
     // ===== 加权计分 + 分班 =====
     var totalScore = calculateScore(dims);
     var cls = classify(totalScore, dims.allrounder);
 
-    // ===== 第二步：AI 生成评语 =====
-    var evaluation;
-    try {
-      var ep = buildEvaluationPrompt(dims, totalScore, cls.level);
-      evaluation = await callAI(ep.systemPrompt, ep.userPrompt);
-      console.log('AI评语生成成功');
-    } catch (aiErr2) {
-      console.error('AI 评语生成失败，使用模板降级:', aiErr2.message);
+    // 如果评语还没有，使用模板
+    if (!evaluation) {
       evaluation = fallbackEvaluation(dims, totalScore, cls);
     }
 
@@ -241,12 +256,13 @@ exports.handler = async function(event, context) {
         label: cls.label,
         path: cls.path,
         dimensions: dims,
-        evaluation: evaluation
+        evaluation: evaluation,
+        _debug: debugInfo
       })
     };
 
   } catch (err) {
     console.error('云函数出错:', err);
-    return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: '服务器内部错误' }) };
+    return { statusCode: 500, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: '服务器内部错误', _debug: debugInfo }) };
   }
 };
