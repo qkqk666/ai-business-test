@@ -3,226 +3,236 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI业务天赋速测系统</title>
+    <title>AI人才评估系统 - 选择测评模式</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            height: 100vh; overflow: hidden;
+            background: #0a0e17;
+        }
+        .split-container {
+            display: flex; height: 100vh; width: 100%;
+        }
+        .panel {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 3rem 2rem; position: relative;
+            cursor: pointer; transition: flex 0.6s cubic-bezier(.4,0,.2,1);
+            overflow: hidden;
+        }
+        .panel::before {
+            content: ''; position: absolute; inset: 0;
+            transition: opacity 0.6s ease; z-index: 0;
+        }
+        .panel-classic::before {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        }
+        .panel-starcore::before {
+            background: linear-gradient(135deg, #0a0e17 0%, #1a1f2e 40%, #1e293b 100%);
+        }
+        .panel:hover { flex: 1.4; }
+        .panel:not(:hover) { flex: 0.8; }
+        .split-container:not(:hover) .panel { flex: 1; }
+
+        .divider {
+            width: 1px; background: rgba(255,255,255,0.08);
+            position: relative; z-index: 10;
+        }
+        .divider::after {
+            content: 'VS'; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%,-50%);
+            color: rgba(255,255,255,0.25); font-size: 0.85rem;
+            font-weight: 700; letter-spacing: 2px;
+            background: #0a0e17; padding: 1rem 0.5rem;
+        }
+
+        .panel-content {
+            position: relative; z-index: 1;
+            text-align: center; max-width: 420px;
+            transition: transform 0.4s ease, opacity 0.4s ease;
+        }
+        .panel:hover .panel-content { transform: translateY(-8px); }
+
+        .panel-icon {
+            width: 72px; height: 72px; border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.8rem; margin: 0 auto 1.5rem;
+            transition: transform 0.4s ease;
+        }
+        .panel:hover .panel-icon { transform: scale(1.1); }
+
+        .panel-classic .panel-icon {
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+        .panel-starcore .panel-icon {
+            background: rgba(72, 149, 239, 0.15);
+            color: #4895ef; border: 1px solid rgba(72, 149, 239, 0.3);
+        }
+
+        .panel-title {
+            font-size: 1.6rem; font-weight: 700;
+            margin-bottom: 0.6rem; line-height: 1.3;
+        }
+        .panel-classic .panel-title { color: #c7d2fe; }
+        .panel-starcore .panel-title {
+            background: linear-gradient(90deg, #4895ef, #4cc9f0);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .panel-subtitle {
+            font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.6;
+        }
+        .panel-classic .panel-subtitle { color: #94a3b8; }
+        .panel-starcore .panel-subtitle { color: #94a3b8; }
+
+        .panel-features {
+            text-align: left; margin-bottom: 2rem;
+        }
+        .feature-item {
+            display: flex; align-items: flex-start; gap: 0.6rem;
+            margin-bottom: 0.7rem; font-size: 0.88rem;
+            color: #94a3b8; line-height: 1.4;
+        }
+        .feature-item i { margin-top: 0.15rem; font-size: 0.75rem; }
+        .panel-classic .feature-item i { color: #818cf8; }
+        .panel-starcore .feature-item i { color: #4895ef; }
+
+        .enter-btn {
+            display: inline-flex; align-items: center; gap: 0.6rem;
+            padding: 0.85rem 2rem; border-radius: 10px;
+            font-size: 0.95rem; font-weight: 600;
+            border: none; cursor: pointer;
+            transition: all 0.3s ease; text-decoration: none;
+        }
+        .panel-classic .enter-btn {
+            background: rgba(99, 102, 241, 0.15);
+            color: #c7d2fe; border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+        .panel-classic .enter-btn:hover {
+            background: rgba(99, 102, 241, 0.25);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.2);
+        }
+        .panel-starcore .enter-btn {
+            background: linear-gradient(135deg, #4361ee, #3a0ca3);
+            color: white; border: none;
+        }
+        .panel-starcore .enter-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(67, 97, 238, 0.4);
+        }
+
+        .recommend-badge {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            background: linear-gradient(90deg, #f72585, #b5179e);
+            color: white; padding: 0.25rem 0.8rem;
+            border-radius: 20px; font-size: 0.75rem;
+            font-weight: 600; margin-bottom: 1rem;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from { box-shadow: 0 0 8px rgba(247, 37, 133, 0.3); }
+            to { box-shadow: 0 0 16px rgba(247, 37, 133, 0.6); }
+        }
+
+        .time-badge {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            color: #64748b; font-size: 0.8rem; margin-top: 0.8rem;
+        }
+
+        /* Stars background for starcore panel */
+        .stars {
+            position: absolute; inset: 0; z-index: 0; overflow: hidden;
+        }
+        .star {
+            position: absolute; width: 2px; height: 2px;
+            background: white; border-radius: 50%;
+            animation: twinkle 3s ease-in-out infinite;
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 0.8; }
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .split-container { flex-direction: column; }
+            .panel { padding: 2rem 1.5rem; }
+            .panel:hover { flex: 1.3; }
+            .panel:not(:hover) { flex: 0.85; }
+            .divider { width: 100%; height: 1px; }
+            .divider::after { padding: 0.5rem 1rem; }
+            .panel-title { font-size: 1.3rem; }
+        }
+        @media (max-width: 480px) {
+            .panel-features { display: none; }
+            .panel-title { font-size: 1.2rem; }
+        }
+    </style>
 </head>
 <body>
-    <!-- Netlify Forms: 隐藏表单，部署后自动在后台收集每条提交 -->
-    <form name="quiz-submissions" data-netlify="true" netlify-honeypot="bot-field" hidden>
-        <input name="bot-field">
-        <input name="phone" type="text">
-        <textarea name="q1"></textarea>
-        <textarea name="a1"></textarea>
-        <textarea name="q2"></textarea>
-        <textarea name="a2"></textarea>
-        <textarea name="q3"></textarea>
-        <textarea name="a3"></textarea>
-        <textarea name="q4"></textarea>
-        <textarea name="a4"></textarea>
-        <textarea name="q5"></textarea>
-        <textarea name="a5"></textarea>
-        <textarea name="q6"></textarea>
-        <textarea name="a6"></textarea>
-        <input name="totalScore" type="text">
-        <input name="level" type="text">
-        <input name="label" type="text">
-        <input name="path" type="text">
-        <input name="dimensions" type="text">
-        <textarea name="evaluation"></textarea>
-        <input name="timestamp" type="text">
-    </form>
-
-    <header>
-        <div class="container">
-            <div class="header-content">
-                <h1><i class="fas fa-bolt"></i> AI业务天赋速测</h1>
-                <div class="badge">6题深度评估</div>
-                <p class="subtitle">约束明确 · AI双重判定 · 精准分级</p>
-                <p class="header-desc">每道题考察一个核心维度，AI 逐题判定后生成个性化评语</p>
+    <div class="split-container">
+        <!-- Left: Classic Assessment -->
+        <div class="panel panel-classic" onclick="window.location.href='./classic/'">
+            <div class="panel-content">
+                <div class="panel-icon">
+                    <i class="fas fa-pen-fancy"></i>
+                </div>
+                <div class="panel-title">AI业务天赋速测</div>
+                <div class="panel-subtitle">6题精准评估，AI逐题判定<br>快速识别你的业务思维特质</div>
+                <div class="panel-features">
+                    <div class="feature-item"><i class="fas fa-check"></i>6道结构化情景题</div>
+                    <div class="feature-item"><i class="fas fa-check"></i>AI双重判定 + 五维评分</div>
+                    <div class="feature-item"><i class="fas fa-check"></i>即时出结果，适合快速筛选</div>
+                </div>
+                <a class="enter-btn" href="./classic/">
+                    <i class="fas fa-arrow-right"></i> 进入传统测评
+                </a>
+                <div class="time-badge"><i class="fas fa-clock"></i> 约5-10分钟</div>
             </div>
         </div>
-    </header>
 
-    <main class="container">
-        <!-- 答题区 -->
-        <section class="section" id="testSection">
-            <div class="section-intro">
-                <h2><i class="fas fa-pen-fancy"></i> 开始测评</h2>
-                <p>请认真作答每道题，系统会基于你的<strong>真实思维方式</strong>判定，而非答案长短。</p>
-            </div>
+        <div class="divider"></div>
 
-            <div class="progress-container">
-                <div id="progressBar" class="progress-bar"></div>
-                <div id="progressText" class="progress-text">0 / 7</div>
-            </div>
-
-            <!-- 第1题：本质导向 -->
-            <div class="question-card" id="card_q1">
-                <div class="question-header">
-                    <span class="question-num">01</span>
-                    <span class="question-dim">本质导向</span>
+        <!-- Right: Starcore Assessment -->
+        <div class="panel panel-starcore" onclick="window.location.href='starcore/index.html'">
+            <div class="stars" id="starsContainer"></div>
+            <div class="panel-content">
+                <div class="recommend-badge">
+                    <i class="fas fa-star"></i> 推荐体验
                 </div>
-                <div class="question-text">
-                    一家开了十年的社区面馆，口味不错，但近半年生意下滑。老板觉得是附近新开了三家面馆抢了客人。<br><br>
-                    如果你是他，你会先怀疑哪个<strong>自己店里的根本问题</strong>？<br>
-                    <span class="question-hint">（提示：不是口味、价格、服务）请用一两句话说清楚。</span>
+                <div class="panel-icon">
+                    <i class="fas fa-rocket"></i>
                 </div>
-                <textarea id="answer_1" class="answer-input" rows="3" placeholder="写出你认为的根本问题..." oninput="updateProgress()"></textarea>
-            </div>
-
-            <!-- 第2题：强逻辑 -->
-            <div class="question-card" id="card_q2">
-                <div class="question-header">
-                    <span class="question-num">02</span>
-                    <span class="question-dim">强逻辑</span>
+                <div class="panel-title">星核纪元 · 沉浸式解谜</div>
+                <div class="panel-subtitle">科幻世界观 · NPC自由对话<br>六维思维深度评估</div>
+                <div class="panel-features">
+                    <div class="feature-item"><i class="fas fa-check"></i>沉浸式科幻世界探索</div>
+                    <div class="feature-item"><i class="fas fa-check"></i>与NPC自由对话收集线索</div>
+                    <div class="feature-item"><i class="fas fa-check"></i>AI六维思维深度评估</div>
                 </div>
-                <div class="question-text">
-                    你接手一家业绩下滑的门店，老板给了一堆杂乱信息。<br><br>
-                    你第一步会怎么<strong>组织这些信息</strong>，让自己心里有数？<br>
-                    <span class="question-hint">请用"第一步...第二步...第三步..."的结构回答。</span>
-                </div>
-                <textarea id="answer_2" class="answer-input" rows="4" placeholder="第一步...&#10;第二步...&#10;第三步..." oninput="updateProgress()"></textarea>
+                <a class="enter-btn" href="starcore/index.html">
+                    <i class="fas fa-rocket"></i> 进入星核纪元
+                </a>
+                <div class="time-badge"><i class="fas fa-clock"></i> 约15-30分钟</div>
             </div>
-
-            <!-- 第3题：体系重构 -->
-            <div class="question-card" id="card_q3">
-                <div class="question-header">
-                    <span class="question-num">03</span>
-                    <span class="question-dim">体系重构</span>
-                </div>
-                <div class="question-text">
-                    如果让你全权改革一个传统公司的业务流程，你<strong>第一刀会砍掉哪个环节</strong>？<br><br>
-                    <span class="question-hint">为什么非砍它不可？</span>
-                </div>
-                <textarea id="answer_3" class="answer-input" rows="3" placeholder="我会砍掉...因为..." oninput="updateProgress()"></textarea>
-            </div>
-
-            <!-- 第4题：街头洞察 -->
-            <div class="question-card" id="card_q4">
-                <div class="question-header">
-                    <span class="question-num">04</span>
-                    <span class="question-dim">街头洞察</span>
-                </div>
-                <div class="question-text">
-                    你最近一次在线下消费时，有没有哪个细节让你觉得<strong>"这老板很会做生意"</strong>？<br><br>
-                    <span class="question-hint">描述一下那个细节。</span>
-                </div>
-                <textarea id="answer_4" class="answer-input" rows="3" placeholder="我注意到..." oninput="updateProgress()"></textarea>
-            </div>
-
-            <!-- 第5题：效率杠杆 -->
-            <div class="question-card" id="card_q5">
-                <div class="question-header">
-                    <span class="question-num">05</span>
-                    <span class="question-dim">效率杠杆</span>
-                </div>
-                <div class="question-text">
-                    如果现在有一个重复性极高的任务（比如整理一千份杂乱表格），你会怎么处理？<br><br>
-                    <span class="question-hint">（提示：是否会用工具或自动化？）描述你的大致思路。</span>
-                </div>
-                <textarea id="answer_5" class="answer-input" rows="3" placeholder="我会..." oninput="updateProgress()"></textarea>
-            </div>
-
-            <!-- 第6题：附加题 - 全能验证 -->
-            <div class="question-card bonus-card" id="card_q6">
-                <div class="question-header">
-                    <span class="question-num">06</span>
-                    <span class="question-dim bonus">附加挑战</span>
-                </div>
-                <div class="question-text">
-                    一家开在老小区的社区食堂，主打低价便民，但经营了三年始终微利。<br><br>
-                    老板想在<strong>不提高价格、不降低分量</strong>的前提下，把利润翻一倍。<br><br>
-                    如果你来操盘，核心思路是什么？<span class="question-hint">请用几句话描述。</span>
-                </div>
-                <textarea id="answer_6" class="answer-input" rows="4" placeholder="我的核心思路是..." oninput="updateProgress()"></textarea>
-            </div>
-
-            <!-- 手机号 -->
-            <div class="question-card phone-card" id="card_phone">
-                <div class="question-header">
-                    <span class="question-num"><i class="fas fa-phone"></i></span>
-                    <span class="question-dim contact">联系方式</span>
-                </div>
-                <div class="question-text">
-                    请留下您的手机号，方便我们后续沟通详细培养方案：
-                </div>
-                <input type="tel" id="contact_phone" class="answer-input phone-input" placeholder="请输入11位手机号码" oninput="updateProgress()">
-                <div class="compact-hint">仅用于课程咨询，不会泄露个人信息</div>
-            </div>
-
-            <!-- 提交按钮 -->
-            <div class="button-group">
-                <button id="submitTest" class="btn btn-primary btn-large">
-                    <i class="fas fa-paper-plane"></i> 提交测评
-                </button>
-                <button id="resetTest" class="btn btn-ghost">
-                    <i class="fas fa-redo"></i> 清空所有
-                </button>
-            </div>
-        </section>
-
-        <!-- 加载状态 -->
-        <section id="loadingArea" class="section" style="display:none;">
-            <div class="loading-content">
-                <div class="loading-spinner"></div>
-                <p class="loading-title">AI 正在深度分析您的回答...</p>
-                <p class="loading-desc">正在进行五维判定和天赋评语生成，约需 5-10 秒</p>
-            </div>
-        </section>
-
-        <!-- 结果展示 -->
-        <section id="resultArea" class="section" style="display:none;">
-            <h2><i class="fas fa-trophy"></i> 测评结果</h2>
-
-            <!-- 等级大字 -->
-            <div class="result-hero">
-                <div class="result-level" id="resultLevel">--</div>
-                <div class="result-label" id="resultLabel">等待分析</div>
-                <div class="result-path" id="resultPath"></div>
-            </div>
-
-            <!-- 总分 -->
-            <div class="score-bar">
-                <span class="score-text">加权总分</span>
-                <span class="score-value" id="totalScore">0</span>
-                <span class="score-max">/ 8</span>
-            </div>
-
-            <!-- 五维结果 -->
-            <div class="dimensions-grid" id="dimensionsGrid">
-                <!-- 由 JS 动态生成 -->
-            </div>
-
-            <!-- AI 评语 -->
-            <div class="evaluation-box">
-                <div class="evaluation-title">
-                    <i class="fas fa-robot"></i> AI 天赋速评
-                </div>
-                <div class="evaluation-text" id="evaluationText">等待分析...</div>
-            </div>
-
-            <div class="contact-note">
-                <i class="fas fa-phone"></i> 我们已记录您的联系方式，将在24小时内与您联系沟通详细培养方案。
-            </div>
-
-            <div class="button-group" style="margin-top:1.5rem;">
-                <button id="downloadReport" class="btn btn-secondary">
-                    <i class="fas fa-download"></i> 下载报告
-                </button>
-                <button id="startNewTest" class="btn btn-ghost">
-                    <i class="fas fa-plus-circle"></i> 重新测评
-                </button>
-            </div>
-        </section>
-    </main>
-
-    <footer class="container">
-        <div class="footer">
-            <p>&copy; 2025 AI业务天赋速测系统 · 六题深度评估</p>
         </div>
-    </footer>
+    </div>
 
-    <script src="script.js"></script>
+    <script>
+        // Generate random stars for starcore panel
+        const container = document.getElementById('starsContainer');
+        for (let i = 0; i < 60; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            star.style.animationDelay = Math.random() * 3 + 's';
+            star.style.animationDuration = (2 + Math.random() * 3) + 's';
+            container.appendChild(star);
+        }
+    </script>
 </body>
 </html>

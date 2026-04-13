@@ -1,0 +1,4729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星核纪元 · 黄金学员筛选系统</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+    <style>
+        :root {
+            --primary: #0a0e17;
+            --secondary: #1a1f2e;
+            --accent: #4361ee;
+            --accent-light: #4895ef;
+            --accent-dark: #3a0ca3;
+            --success: #4cc9f0;
+            --warning: #f8961e;
+            --danger: #f72585;
+            --text: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border: #2d3748;
+            --card-bg: rgba(26, 31, 46, 0.9);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI','Microsoft YaHei',sans-serif; }
+        body { color:var(--text); line-height:1.6; min-height:100vh; background:linear-gradient(135deg,#0f172a,#1e293b); overflow:hidden; }
+
+        /* Scene backgrounds */
+        .scene-bg { position:fixed; inset:0; background-size:cover; background-position:center; z-index:-2; opacity:0; transition:opacity 1.5s ease; }
+        .scene-bg.active { opacity:0.6; }
+        #bg-shine { background:linear-gradient(rgba(10,14,23,.85),rgba(26,31,46,.85)),url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=2093'); background-size:cover; }
+        #bg-shadow { background:linear-gradient(rgba(10,14,23,.85),rgba(26,31,46,.85)),url('https://images.unsplash.com/photo-1446776653964-20c1d3a81b06?q=80&w=2071'); background-size:cover; }
+        #bg-obs { background:linear-gradient(rgba(10,14,23,.85),rgba(26,31,46,.85)),url('https://images.unsplash.com/photo-1446776877081-d282a0f896e2?q=80&w=2072'); background-size:cover; }
+        #bg-scan { background:linear-gradient(rgba(10,14,23,.85),rgba(26,31,46,.85)),url('https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?q=80&w=2072'); background-size:cover; }
+
+        /* Pulse dots */
+        .pulse-container { position:fixed; inset:0; pointer-events:none; z-index:-1; }
+        .pulse-dot { position:absolute; width:3px; height:3px; background:var(--accent); border-radius:50%; animation:pulseDot 2s infinite; }
+        @keyframes pulseDot { 0%,100%{opacity:.2;transform:scale(.8)} 50%{opacity:.7;transform:scale(1.2)} }
+
+        /* ========== COCKPIT LAYOUT ========== */
+        .cockpit {
+            display: grid;
+            grid-template-columns: 260px 1fr 280px;
+            grid-template-rows: 70px 1fr;
+            height: 100vh;
+            gap: 0;
+        }
+
+        /* Header */
+        .cockpit-header {
+            grid-column: 1 / -1;
+            background:linear-gradient(135deg,rgba(10,14,23,.95),rgba(26,31,46,.95));
+            backdrop-filter:blur(10px);
+            border-bottom:1px solid var(--border);
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            padding:0 1.5rem;
+            z-index:100;
+        }
+        .header-left { display:flex; align-items:center; gap:1.5rem; }
+        h1 { font-size:1.5rem; font-weight:700; background:linear-gradient(90deg,var(--accent-light),var(--success)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .badge { display:inline-flex; align-items:center; gap:.5rem; background:linear-gradient(90deg,var(--accent-dark),var(--danger)); color:white; padding:.35rem 1rem; border-radius:20px; font-size:.8rem; font-weight:600; }
+        .header-right { display:flex; align-items:center; gap:1.5rem; }
+        .mission-time { color:var(--text-secondary); font-size:.9rem; display:flex; align-items:center; gap:.5rem; }
+        .music-controls { display:flex; align-items:center; gap:.5rem; }
+        .music-btn { width:36px; height:36px; border-radius:8px; background:rgba(255,255,255,.05); border:1px solid var(--border); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .3s; }
+        .music-btn:hover,.music-btn.active { background:rgba(67,97,238,.2); color:var(--accent-light); border-color:var(--accent); }
+        .music-visualizer { width:60px; height:18px; position:relative; overflow:hidden; }
+        .vis-bar { position:absolute; bottom:0; width:3px; background:linear-gradient(to top,var(--accent),var(--success)); border-radius:2px; transition:height .15s; }
+
+        /* Left Panel - Location Nav */
+        .left-panel {
+            background:var(--card-bg);
+            border-right:1px solid var(--border);
+            overflow-y:auto;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+        }
+        .left-panel.sliding { transform: translateX(-100%); opacity: 0; }
+
+        .panel-section { border-bottom:1px solid var(--border); }
+        .panel-header {
+            display:flex; justify-content:space-between; align-items:center;
+            padding:1rem 1.2rem; cursor:pointer; user-select:none;
+            color:var(--accent-light); font-size:.95rem; font-weight:600;
+            transition:background .2s;
+        }
+        .panel-header:hover { background:rgba(67,97,238,.1); }
+        .panel-header i { transition:transform .3s; }
+        .panel-header.collapsed i { transform:rotate(-90deg); }
+        .panel-content { max-height:500px; overflow:hidden; transition:max-height .3s ease, opacity .3s; }
+        .panel-content.collapsed { max-height:0; opacity:0; }
+
+        .location-list { list-style:none; padding:.5rem 0; }
+        .location-item {
+            padding:.8rem 1.2rem; cursor:pointer; transition:all .3s;
+            border-left:3px solid transparent; display:flex; align-items:center; gap:.8rem;
+        }
+        .location-item:hover:not(.locked) { background:rgba(67,97,238,.1); border-left-color:var(--accent); }
+        .location-item.active { background:rgba(67,97,238,.15); border-left-color:var(--success); }
+        .location-item.locked { opacity:0.4; cursor:not-allowed; }
+        .location-icon { width:32px; height:32px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:.9rem; flex-shrink:0; }
+        .location-icon.shine { background:rgba(114,9,183,.2); color:#9d4edd; }
+        .location-icon.shadow { background:rgba(76,201,240,.2); color:var(--success); }
+        .location-icon.obs { background:rgba(67,97,238,.2); color:var(--accent-light); }
+        .location-icon.scan { background:rgba(248,37,133,.2); color:var(--danger); }
+        .location-info h4 { font-size:.9rem; font-weight:600; }
+        .location-info p { font-size:.75rem; color:var(--text-secondary); }
+        .lock-icon { margin-left:auto; font-size:.75rem; color:var(--text-secondary); }
+
+        /* 线索碎片进度 */
+        .clue-progress {
+            font-size:.65rem;
+            color:var(--text-secondary);
+            margin-top:.2rem;
+        }
+        .clue-dots {
+            display:flex;
+            gap:3px;
+            margin-top:.3rem;
+        }
+        .clue-dot {
+            width:6px;
+            height:6px;
+            border-radius:50%;
+            background:var(--border);
+            transition:all .3s;
+        }
+        .clue-dot.filled {
+            background:var(--success);
+            box-shadow:0 0 4px rgba(76,201,240,.5);
+        }
+        .location-item.active .clue-dot.filled {
+            animation:cluePulse 1.5s infinite;
+        }
+        @keyframes cluePulse {
+            0%,100%{transform:scale(1)}
+            50%{transform:scale(1.3)}
+        }
+
+        /* 解锁泛光动画 */
+        .unlock-glow {
+            position:fixed;
+            inset:0;
+            pointer-events:none;
+            z-index:9999;
+            animation:unlockFlash 1.5s ease-out forwards;
+        }
+        @keyframes unlockFlash {
+            0% { box-shadow:inset 0 0 0 0 rgba(76,201,240,0); }
+            20% { box-shadow:inset 0 0 100px 20px rgba(76,201,240,.4); }
+            100% { box-shadow:inset 0 0 0 0 rgba(76,201,240,0); }
+        }
+
+        /* 解锁后的呼吸灯效果 */
+        .location-item.just-unlocked {
+            animation:unlockBreath 2s ease-out;
+        }
+        @keyframes unlockBreath {
+            0% { box-shadow:0 0 0 0 rgba(76,201,240,.5); }
+            50% { box-shadow:0 0 20px 5px rgba(76,201,240,.3); }
+            100% { box-shadow:0 0 0 0 rgba(76,201,240,0); }
+        }
+
+        /* Center Panel - Chat */
+        .center-panel {
+            display:flex;
+            flex-direction:column;
+            height:100%;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .center-panel.pickup {
+            animation: pickupEffect 0.5s ease-out;
+        }
+        @keyframes pickupEffect {
+            0% { transform: translateX(0) scale(1); }
+            30% { transform: translateX(-20px) scale(0.98); opacity:0.8; }
+            100% { transform: translateX(0) scale(1); opacity:1; }
+        }
+
+        .chat-container {
+            background:var(--card-bg);
+            flex:1;
+            display:flex;
+            flex-direction:column;
+            border-left:1px solid var(--border);
+            border-right:1px solid var(--border);
+        }
+        .chat-header {
+            padding:1rem 1.2rem; border-bottom:1px solid var(--border);
+            display:flex; justify-content:space-between; align-items:center;
+        }
+        .current-npc { display:flex; align-items:center; gap:.8rem; }
+
+        /* Octagonal MOSS Avatar */
+        .npc-avatar {
+            width:44px; height:44px;
+            display:flex; align-items:center; justify-content:center;
+            font-size:1.1rem; position:relative;
+            clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+        }
+        .npc-avatar.ol { background:linear-gradient(135deg,#7209b7,#9d4edd); }
+        .npc-avatar.ak { background:linear-gradient(135deg,#4cc9f0,#4895ef); }
+        .npc-avatar.hel { background:linear-gradient(135deg,#4361ee,#3a0ca3); }
+        .npc-avatar.none { background:var(--secondary); }
+        .npc-avatar.unknown { background:linear-gradient(135deg,#2d3748,#1a202c); border:2px dashed var(--text-secondary); }
+
+        .npc-info h4 { font-size:.95rem; font-weight:600; }
+        .npc-info p { font-size:.8rem; color:var(--text-secondary); }
+        .npc-emotion { font-size:.7rem; padding:.15rem .5rem; border-radius:8px; margin-left:.5rem; }
+        .npc-emotion.worry { background:rgba(248,150,30,.2); color:var(--warning); }
+        .npc-emotion.calm { background:rgba(76,201,240,.2); color:var(--success); }
+        .npc-emotion.curious { background:rgba(67,97,238,.2); color:var(--accent-light); }
+        .npc-emotion.sad { background:rgba(157,78,221,.2); color:#9d4edd; }
+        .npc-emotion.alert { background:rgba(247,37,133,.2); color:var(--danger); }
+        .npc-emotion.dying { background:rgba(247,37,133,.3); color:var(--danger); animation: dyingPulse 2s infinite; }
+        @keyframes dyingPulse { 0%,100%{opacity:.7} 50%{opacity:1} }
+
+        .chat-actions { display:flex; gap:.4rem; }
+        .icon-btn { width:34px; height:34px; border-radius:6px; background:rgba(255,255,255,.05); border:1px solid var(--border); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .3s; font-size:.85rem; }
+        .icon-btn:hover { background:rgba(67,97,238,.1); color:var(--accent-light); border-color:var(--accent); }
+        .icon-btn.active { background:rgba(67,97,238,.2); color:var(--accent-light); }
+
+        .chat-messages { flex:1; padding:1rem 1.2rem; overflow-y:auto; display:flex; flex-direction:column; gap:.8rem; max-height:calc(100vh - 280px); }
+        .message { max-width:85%; animation:fadeIn .3s ease; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .message.npc { align-self:flex-start; }
+        .message.user { align-self:flex-end; }
+        .message-bubble { padding:.75rem 1rem; border-radius:10px; font-size:.9rem; line-height:1.5; }
+        .message.user .message-bubble { background:linear-gradient(135deg,var(--accent),var(--accent-dark)); border-bottom-right-radius:4px; }
+        .message.npc .message-bubble { background:rgba(255,255,255,.05); border:1px solid var(--border); border-bottom-left-radius:4px; }
+        .message-header { display:flex; align-items:center; gap:.4rem; margin-bottom:.3rem; font-size:.8rem; }
+        .message-header .name { font-weight:600; color:var(--accent-light); }
+        .message-header .time { color:var(--text-secondary); }
+        .message.system .message-bubble { background:rgba(67,97,238,.1); border-color:rgba(67,97,238,.3); }
+
+        /* Typing indicator */
+        .typing-indicator { display:inline-flex; gap:3px; padding:3px 0; }
+        .typing-indicator span { width:5px; height:5px; background:var(--text-secondary); border-radius:50%; animation:typingBounce 1.2s infinite; }
+        .typing-indicator span:nth-child(2) { animation-delay:.15s; }
+        .typing-indicator span:nth-child(3) { animation-delay:.3s; }
+        @keyframes typingBounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+
+        .chat-input-area { padding:.8rem 1.2rem; border-top:1px solid var(--border); }
+        .input-group { display:flex; gap:.6rem; }
+        .chat-input { flex:1; padding:.7rem 1rem; background:rgba(255,255,255,.05); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:.9rem; resize:none; min-height:44px; max-height:100px; transition:all .3s; }
+        .chat-input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(67,97,238,.1); }
+        .send-btn { padding:0 1.2rem; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); border:none; border-radius:8px; color:white; font-weight:600; cursor:pointer; transition:all .3s; display:flex; align-items:center; gap:.4rem; font-size:.9rem; }
+        .send-btn:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(67,97,238,.3); }
+
+        /* Action buttons area */
+        .action-buttons { padding:.8rem 1.2rem; border-top:1px solid var(--border); display:flex; flex-wrap:wrap; gap:.5rem; }
+        .action-chip {
+            padding:.5rem 1rem; border-radius:20px; font-size:.8rem; font-weight:500;
+            cursor:pointer; transition:all .3s; border:1px solid var(--border);
+            background:rgba(255,255,255,.03); color:var(--text-secondary);
+            display:flex; align-items:center; gap:.4rem;
+        }
+        .action-chip:hover { background:rgba(67,97,238,.15); border-color:var(--accent); color:var(--accent-light); transform:translateY(-1px); }
+        .action-chip.active { background:rgba(67,97,238,.2); border-color:var(--accent-light); color:var(--accent-light); }
+        .action-chip i { font-size:.75rem; }
+
+        /* Right Panel - Data */
+        .right-panel {
+            background:var(--card-bg);
+            overflow-y:auto;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+        }
+        .right-panel.sliding { transform: translateX(100%); opacity: 0; }
+
+        .data-section { padding:1rem; border-bottom:1px solid var(--border); }
+        .data-section h3 { color:var(--accent-light); font-size:.9rem; margin-bottom:.8rem; display:flex; align-items:center; gap:.5rem; }
+        .data-item { display:flex; justify-content:space-between; align-items:center; padding:.5rem 0; font-size:.85rem; }
+        .data-item .label { color:var(--text-secondary); }
+        .data-item .value { font-weight:600; }
+        .data-item .value.highlight { color:var(--success); }
+        .data-item .value.warning { color:var(--warning); }
+        .data-item .value.danger { color:var(--danger); }
+
+        /* Progress bar */
+        .progress-container { background:rgba(255,255,255,.05); height:6px; border-radius:3px; overflow:hidden; margin:.5rem 0; }
+        .progress-bar { height:100%; background:linear-gradient(90deg,var(--accent),var(--success)); border-radius:3px; width:5%; transition:width .5s; }
+
+        /* Easter egg mini grid */
+        .egg-mini { display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem; }
+        .egg-mini-item { background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:6px; padding:.6rem; text-align:center; }
+        .egg-mini-item .val { font-size:1.1rem; font-weight:700; color:var(--accent-light); }
+        .egg-mini-item .lbl { font-size:.65rem; color:var(--text-secondary); margin-top:.2rem; }
+
+        /* Info panel */
+        .info-brief { background:rgba(255,255,255,.03); border-radius:8px; padding:.8rem; font-size:.8rem; color:var(--text-secondary); line-height:1.5; }
+
+        /* ========== STORY NODES ========== */
+        .story-overlay { position:fixed; inset:0; background:rgba(10,14,23,.97); z-index:2000; display:none; align-items:center; justify-content:center; padding:20px; }
+        .story-overlay.active { display:flex; animation:storyFadeIn .8s ease; }
+        @keyframes storyFadeIn { from{opacity:0} to{opacity:1} }
+        .story-modal { background:linear-gradient(135deg,var(--secondary),var(--primary)); border:2px solid var(--accent); border-radius:20px; max-width:600px; width:100%; text-align:center; padding:2.5rem 2rem; position:relative; overflow:hidden; }
+        .story-modal::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(67,97,238,.1),transparent); pointer-events:none; }
+        .story-icon { font-size:3.5rem; margin-bottom:1.2rem; animation:storyIconPulse 2s infinite; }
+        @keyframes storyIconPulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.1);opacity:.8} }
+        .story-title { font-size:1.8rem; font-weight:800; margin-bottom:1rem; background:linear-gradient(90deg,var(--accent-light),var(--success)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .story-content { font-size:1rem; color:var(--text-secondary); line-height:1.7; margin-bottom:1.5rem; }
+        .story-btn { padding:.8rem 2rem; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); border:none; border-radius:25px; color:white; font-size:1rem; font-weight:600; cursor:pointer; transition:all .3s; }
+        .story-btn:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(67,97,238,.4); }
+        .story-progress { position:absolute; bottom:0; left:0; height:3px; background:linear-gradient(90deg,var(--accent),var(--success)); width:0; transition:width 5s linear; }
+        .story-progress.active { width:100%; }
+
+        /* ========== MOSS TAKEOVER ========== */
+        .takeover-overlay { position:fixed; inset:0; background:rgba(0,0,0,0); z-index:2500; pointer-events:none; transition:background 2s; }
+        .takeover-overlay.active { background:rgba(247,37,133,.3); pointer-events:all; }
+        .takeover-text { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); font-size:2.5rem; font-weight:800; color:var(--danger); opacity:0; text-shadow:0 0 30px var(--danger); transition:opacity 1s; }
+        .takeover-text.active { opacity:1; animation:takeoverGlitch 2s infinite; }
+        @keyframes takeoverGlitch { 0%,100%{transform:translate(-50%,-50%)} 2%{transform:translate(-52%,-48%)} 4%{transform:translate(-48%,-52%)} 6%{transform:translate(-50%,-50%)} }
+
+        /* ========== INTRO OVERLAY ========== */
+        .intro-overlay { position:fixed; inset:0; background:linear-gradient(135deg,#0a0e17,#1a1f2e); z-index:5000; display:none; flex-direction:column; align-items:center; justify-content:center; padding:40px; overflow:hidden; }
+        .intro-overlay.active { display:flex; }
+        .intro-stars { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+        .intro-star { position:absolute; width:2px; height:2px; background:white; border-radius:50%; animation:introTwinkle 3s infinite; }
+        @keyframes introTwinkle { 0%,100%{opacity:.3} 50%{opacity:1} }
+        .intro-energy { position:absolute; width:300px; height:300px; border-radius:50%; background:radial-gradient(circle,rgba(67,97,238,.2),transparent); animation:introEnergy 4s ease-in-out infinite; }
+        @keyframes introEnergy { 0%,100%{transform:scale(1);opacity:.5} 50%{transform:scale(1.3);opacity:.8} }
+        .intro-content { position:relative; z-index:1; max-width:650px; text-align:center; }
+        .intro-page { display:none; flex-direction:column; align-items:center; }
+        .intro-page.active { display:flex; animation:introFadeIn 1s ease; }
+        @keyframes introFadeIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        .intro-icon { font-size:4.5rem; margin-bottom:1.8rem; background:linear-gradient(135deg,var(--accent-light),var(--success)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .intro-title { font-size:2.2rem; font-weight:800; margin-bottom:1.2rem; background:linear-gradient(90deg,var(--accent-light),var(--success)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .intro-text { font-size:1.1rem; line-height:1.9; color:var(--text-secondary); margin-bottom:1.5rem; }
+        .intro-text strong { color:var(--accent-light); }
+        .intro-dots { display:flex; gap:10px; margin-bottom:1.5rem; }
+        .intro-dot { width:10px; height:10px; border-radius:50%; background:var(--border); transition:all .3s; }
+        .intro-dot.active { background:var(--accent); transform:scale(1.2); }
+        .intro-dot.completed { background:var(--success); }
+        .intro-btn { padding:.9rem 2.5rem; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); border:none; border-radius:25px; color:white; font-size:1rem; font-weight:600; cursor:pointer; transition:all .3s; }
+        .intro-btn:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(67,97,238,.4); }
+
+        /* ========== MODAL ========== */
+        .modal { display:none; position:fixed; inset:0; background:rgba(10,14,23,.96); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:20px; }
+        .modal.active { display:flex; animation:fadeIn .3s ease; }
+        .modal-content { background:linear-gradient(135deg,var(--card-bg),rgba(26,31,46,.98)); border:1px solid var(--border); border-radius:16px; width:100%; max-width:750px; max-height:90vh; overflow-y:auto; }
+        .modal-header { padding:1.2rem 1.5rem; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+        .modal-header h3 { color:var(--accent-light); font-size:1.2rem; display:flex; align-items:center; gap:.6rem; }
+        .close-modal { background:none; border:none; color:var(--text-secondary); font-size:1.4rem; cursor:pointer; padding:.4rem; }
+        .close-modal:hover { color:var(--text); }
+        .modal-body { padding:1.2rem 1.5rem; }
+
+        .submit-textarea { width:100%; min-height:180px; padding:1rem; background:rgba(255,255,255,.05); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:.9rem; resize:vertical; line-height:1.6; margin-bottom:.8rem; }
+        .submit-textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(67,97,238,.1); }
+        .submit-phone { width:100%; padding:.75rem 1rem; background:rgba(255,255,255,.05); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:.9rem; margin-bottom:1.2rem; }
+        .submit-phone:focus { outline:none; border-color:var(--accent); }
+        .submit-actions { display:flex; gap:.8rem; justify-content:flex-end; }
+        .submit-hint { color:var(--text-secondary); font-size:.85rem; margin-bottom:.8rem; }
+
+        .action-btn { padding:.7rem 1.2rem; border-radius:8px; font-weight:600; border:none; cursor:pointer; transition:all .3s; display:flex; align-items:center; justify-content:center; gap:.6rem; font-size:.9rem; }
+        .action-btn.primary { background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; }
+        .action-btn.primary:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(67,97,238,.3); }
+        .action-btn.secondary { background:rgba(255,255,255,.05); border:1px solid var(--border); color:var(--text); }
+        .action-btn.secondary:hover { background:rgba(67,97,238,.1); border-color:var(--accent); }
+
+        /* Loading */
+        .loading-overlay { text-align:center; padding:2rem; }
+        .spinner { width:40px; height:40px; border:3px solid var(--border); border-top-color:var(--accent-light); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 1rem; }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        .loading-text { color:var(--text-secondary); font-size:.9rem; }
+        .loading-dots::after { content:''; animation:dots 1.5s steps(4,end) infinite; }
+        @keyframes dots { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} }
+
+        /* Result */
+        .result-hero { text-align:center; padding:1.5rem 0; }
+        .result-level { font-size:2.5rem; font-weight:800; margin-bottom:.4rem; }
+        .result-level.gold { background:linear-gradient(90deg,#f8961e,#f9c74f); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .result-level.normal { color:var(--text-secondary); }
+        .result-tag { font-size:1rem; color:var(--accent-light); margin-bottom:.3rem; }
+        .result-path { font-size:.85rem; color:var(--text-secondary); }
+        .score-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.6rem; margin:1.2rem 0; }
+        .score-item { background:rgba(255,255,255,.05); border:1px solid var(--border); border-radius:8px; padding:.8rem; text-align:center; }
+        .score-item .dim { font-size:.75rem; color:var(--text-secondary); margin-bottom:.2rem; }
+        .score-item .val { font-size:1.4rem; font-weight:700; }
+        .score-item .val.high { color:var(--success); }
+        .score-item .val.mid { color:var(--warning); }
+        .score-item .val.low { color:var(--text-secondary); }
+        .total-score { text-align:center; margin:.8rem 0; font-size:1rem; color:var(--text-secondary); }
+        .total-score span { font-size:1.8rem; font-weight:800; color:var(--accent-light); }
+        .comment-box { background:rgba(67,97,238,.08); border:1px solid rgba(67,97,238,.2); border-radius:10px; padding:1.2rem; margin:1.2rem 0; line-height:1.6; font-size:.9rem; }
+
+        /* Floating submit */
+        .float-submit { position:fixed; bottom:1.5rem; right:1.5rem; z-index:200; width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,var(--danger),#b5179e); color:white; border:none; cursor:pointer; font-size:1.2rem; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 20px rgba(247,37,133,.4); transition:all .3s; animation:floatPulse 2s infinite; }
+        .float-submit:hover { transform:scale(1.1); box-shadow:0 6px 30px rgba(247,37,133,.6); }
+        @keyframes floatPulse { 0%,100%{box-shadow:0 4px 20px rgba(247,37,133,.4)} 50%{box-shadow:0 4px 30px rgba(247,37,133,.7)} }
+
+        /* Hint tag */
+        .hint-tag { display:inline-block; font-size:.65rem; padding:.1rem .4rem; border-radius:4px; margin-left:.4rem; }
+        .hint-tag.insight { background:rgba(67,97,238,.2); color:var(--accent-light); }
+        .hint-tag.warning { background:rgba(248,150,30,.2); color:var(--warning); }
+        .hint-tag.clue { background:rgba(76,201,240,.2); color:var(--success); }
+
+        /* Responsive */
+        @media(max-width:900px) {
+            .cockpit { grid-template-columns: 1fr; grid-template-rows: 60px 1fr 200px; }
+            .left-panel { display:none; }
+            .right-panel { grid-column: 1; }
+            .center-panel { height: auto; }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width:6px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+        ::-webkit-scrollbar-thumb:hover { background:var(--accent); }
+
+        /* ========== TERM ANNOTATION ========== */
+        .term-anchor {
+            color: var(--accent-light);
+            cursor: pointer;
+            border-bottom: 1px dashed var(--accent);
+            transition: all .2s;
+            position: relative;
+        }
+        .term-anchor:hover {
+            color: var(--success);
+            border-bottom-color: var(--success);
+        }
+        .term-anchor::after {
+            content: 'ⓘ';
+            font-size: 0.7em;
+            margin-left: 2px;
+            opacity: 0.6;
+        }
+        .term-anchor:hover::after {
+            opacity: 1;
+            color: var(--success);
+        }
+
+        /* ========== CROSS LINK EFFECT ========== */
+        .crosslink-glow {
+            animation: crosslinkFlash 2s ease-out forwards;
+        }
+        @keyframes crosslinkFlash {
+            0% { box-shadow: inset 0 0 0 0 rgba(251, 191, 36, 0); }
+            15% { box-shadow: inset 0 0 80px 15px rgba(251, 191, 36, 0.35); }
+            100% { box-shadow: inset 0 0 0 0 rgba(251, 191, 36, 0); }
+        }
+
+        /* 跨线关联成功提示 */
+        .crosslink-hint {
+            font-size: .75rem;
+            color: #f59e0b;
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            padding: .3rem .6rem;
+            border-radius: 6px;
+            margin-top: .4rem;
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+        }
+        .crosslink-hint i {
+            color: #fbbf24;
+        }
+
+        /* 调试按钮样式 */
+        .debug-btn {
+            position: fixed;
+            left: 1rem;
+            bottom: 1rem;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(59, 130, 246, 0.3);
+            border: 1px solid rgba(59, 130, 246, 0.5);
+            color: #60a5fa;
+            cursor: pointer;
+            z-index: 6000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            z-index: 999;
+            transition: all 0.2s;
+        }
+        .debug-btn:hover {
+            background: rgba(59, 130, 246, 0.5);
+            transform: scale(1.1);
+        }
+        .debug-panel {
+            position: fixed;
+            left: 1rem;
+            bottom: 3.5rem;
+            background: var(--primary);
+            border: 1px solid rgba(59, 130, 246, 0.5);
+            border-radius: 12px;
+            padding: 1rem;
+            display: none;
+            z-index: 6000;
+            min-width: 280px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .debug-panel.active { display: block; }
+        .debug-panel h4 {
+            margin: 0 0 .8rem;
+            color: #60a5fa;
+            font-size: .9rem;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+        .debug-preset {
+            display: block;
+            width: 100%;
+            padding: .6rem .8rem;
+            margin-bottom: .4rem;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            color: #e2e8f0;
+            text-align: left;
+            cursor: pointer;
+            font-size: .8rem;
+            transition: all 0.2s;
+        }
+        .debug-preset:hover {
+            background: rgba(59, 130, 246, 0.3);
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+        .debug-preset small {
+            display: block;
+            color: #94a3b8;
+            font-size: .7rem;
+            margin-top: .2rem;
+        }
+        .debug-input-group {
+            display: flex;
+            gap: .5rem;
+            margin-top: .8rem;
+            padding-top: .8rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .debug-input {
+            flex: 1;
+            padding: .5rem;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            color: #fff;
+            font-size: .8rem;
+        }
+        .debug-input:focus {
+            outline: none;
+            border-color: #60a5fa;
+        }
+        .debug-submit {
+            padding: .5rem 1rem;
+            background: #3b82f6;
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            cursor: pointer;
+            font-size: .8rem;
+        }
+        .debug-submit:hover { background: #2563eb; }
+
+        /* 术语高亮样式 */
+        .term-highlight {
+            color: #60a5fa;
+            cursor: pointer;
+            border-bottom: 1px dashed #60a5fa;
+            transition: all 0.2s;
+        }
+        .term-highlight:hover {
+            color: #93c5fd;
+            background: rgba(96, 165, 250, 0.1);
+        }
+        .term-highlight.shadow {
+            color: #a78bfa;
+            border-color: #a78bfa;
+        }
+        .term-highlight.shadow:hover {
+            background: rgba(167, 139, 250, 0.1);
+        }
+        .term-highlight.obs {
+            color: #34d399;
+            border-color: #34d399;
+        }
+        .term-highlight.obs:hover {
+            background: rgba(52, 211, 153, 0.1);
+        }
+        .term-highlight.moss {
+            color: #f87171;
+            border-color: #f87171;
+        }
+        .term-highlight.moss:hover {
+            background: rgba(248, 113, 113, 0.1);
+        }
+
+        /* ========== 已知信息栏 ========== */
+        .known-info-section {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .known-info-section h3 {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+        .term-badge {
+            font-size: .7rem;
+            padding: .1rem .4rem;
+            background: var(--accent);
+            border-radius: 10px;
+            color: #fff;
+            font-weight: normal;
+        }
+        .known-info-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-top: .5rem;
+        }
+        .known-info-empty {
+            color: var(--text-secondary);
+            font-size: .8rem;
+            text-align: center;
+            padding: 2rem 0;
+            opacity: 0.6;
+        }
+        .known-info-category {
+            font-size: .65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            padding: .5rem 0 .2rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: .3rem;
+        }
+        .known-info-item {
+            display: flex;
+            align-items: flex-start;
+            gap: .5rem;
+            padding: .5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all .2s;
+            margin-bottom: .2rem;
+        }
+        .known-info-item:hover {
+            background: rgba(67, 97, 238, 0.15);
+        }
+        .known-info-icon {
+            font-size: 1rem;
+            flex-shrink: 0;
+            width: 24px;
+            text-align: center;
+        }
+        .known-info-term {
+            font-size: .85rem;
+            color: var(--accent-light);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .known-info-short {
+            font-size: .7rem;
+            color: var(--text-secondary);
+            line-height: 1.3;
+            margin-top: .1rem;
+        }
+        .known-info-item:hover .known-info-term {
+            color: var(--success);
+        }
+
+        /* ========== 增强版术语弹窗 ========== */
+        .term-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 14, 23, 0.95);
+            backdrop-filter: blur(12px);
+            z-index: 6000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .term-modal-overlay.active {
+            display: flex;
+            animation: termFadeIn .3s ease;
+        }
+        @keyframes termFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .term-modal {
+            background: linear-gradient(135deg, #1a1f2e 0%, #0f172a 50%, #1e293b 100%);
+            border: 2px solid var(--accent);
+            border-radius: 20px;
+            max-width: 520px;
+            width: 100%;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 0 60px rgba(67, 97, 238, 0.4), 0 0 120px rgba(67, 97, 238, 0.15);
+            animation: termSlideIn .4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes termSlideIn {
+            from { transform: scale(0.85) translateY(30px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .term-modal-header {
+            padding: 1.5rem;
+            background: linear-gradient(90deg, rgba(67, 97, 238, 0.3), rgba(76, 201, 240, 0.15));
+            border-bottom: 1px solid rgba(67, 97, 238, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .term-modal-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.4);
+        }
+        .term-modal-icon span {
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+        .term-modal-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--accent-light);
+            text-shadow: 0 2px 10px rgba(67, 97, 238, 0.3);
+        }
+        .term-modal-badge {
+            font-size: .7rem;
+            padding: .3rem .8rem;
+            background: rgba(67, 97, 238, 0.4);
+            border: 1px solid rgba(67, 97, 238, 0.6);
+            border-radius: 20px;
+            color: var(--accent-light);
+            margin-left: auto;
+        }
+        .term-modal-close {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: var(--text-secondary);
+            font-size: 1.3rem;
+            cursor: pointer;
+            padding: .3rem .8rem;
+            border-radius: 8px;
+            transition: all .2s;
+        }
+        .term-modal-close:hover {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+        .term-modal-body {
+            padding: 1.5rem;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .term-modal-content {
+            font-size: 1rem;
+            line-height: 1.9;
+            color: var(--text);
+        }
+        .term-modal-content b {
+            color: var(--accent-light);
+            font-weight: 700;
+        }
+        .term-modal-content .term-highlight {
+            color: var(--success);
+            font-weight: 600;
+            background: rgba(52, 211, 153, 0.1);
+            padding: 0 .3rem;
+            border-radius: 3px;
+        }
+        .term-modal-footer {
+            padding: 1rem 1.5rem;
+            background: rgba(0,0,0,0.2);
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+        .term-modal-tip {
+            font-size: .8rem;
+            color: var(--text-secondary);
+        }
+
+        /* 第一次出现的术语高亮样式 */
+        .term-anchor.term-new {
+            color: var(--success);
+            background: rgba(52, 211, 153, 0.15);
+            padding: 0 4px;
+            border-radius: 4px;
+            border-bottom: 2px solid var(--success);
+            animation: termPulse 2s ease-out;
+        }
+        .term-anchor.term-new::before {
+            content: '✨';
+            font-size: 0.7em;
+            margin-right: 2px;
+        }
+        @keyframes termPulse {
+            0% { background: rgba(52, 211, 153, 0.4); transform: scale(1.05); }
+            100% { background: rgba(52, 211, 153, 0.15); transform: scale(1); }
+        }
+        
+        /* MOSS倒计时样式 */
+        @keyframes countdownPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+        }
+        @keyframes countdownShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-3px); }
+            75% { transform: translateX(3px); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Scene backgrounds -->
+    <div class="scene-bg active" id="bg-shine"></div>
+    <div class="scene-bg" id="bg-shadow"></div>
+    <div class="scene-bg" id="bg-obs"></div>
+    <div class="scene-bg" id="bg-scan"></div>
+    <div class="pulse-container" id="pulseContainer"></div>
+
+    <!-- Hidden Netlify Form -->
+    <form name="starcore-submissions" data-netlify="true" netlify-honeypot="bot-field" hidden>
+        <input name="bot-field"><input name="jobId"><input name="phone">
+        <textarea name="conversationHistory"></textarea><textarea name="finalPlan"></textarea>
+        <textarea name="easterEggData"></textarea><input name="timestamp">
+    </form>
+
+    <!-- Intro Overlay -->
+    <div class="intro-overlay active" id="introOverlay">
+        <div class="intro-stars" id="introStars"></div>
+        <div class="intro-energy"></div>
+        <div class="intro-content">
+            <div class="intro-page active" id="introPage1">
+                <div class="intro-icon"><i class="fas fa-solar-system"></i></div>
+                <h2 class="intro-title">星核纪元</h2>
+                <div class="intro-text">
+                    <p>在深空的尽头，有一颗脉动的星核。<strong>烁星</strong>上的等离子生命因它的杂音而失声，<strong>影星</strong>深海的氨基文明被呢喃吞噬。</p>
+                    <p style="margin-top:.8rem;">你是<strong>DSO-7观测站</strong>的最后访客。这座废弃的哨站，曾是泛太阳系探索联盟的前沿阵地。</p>
+                </div>
+                <div class="intro-dots">
+                    <div class="intro-dot active" id="dot1"></div>
+                    <div class="intro-dot" id="dot2"></div>
+                    <div class="intro-dot" id="dot3"></div>
+                </div>
+                <button class="intro-btn" id="introNextBtn1" onclick="var el = document.getElementById('introPage' + S.introPage); if(el) el.classList.remove('active'); S.introPage++; var next = document.getElementById('introPage' + S.introPage); if(next) next.classList.add('active');">继续 <i class="fas fa-arrow-right"></i></button>
+            </div>
+            <div class="intro-page" id="introPage2">
+                <div class="intro-icon"><i class="fas fa-clipboard-list"></i></div>
+                <h2 class="intro-title">任务与评估</h2>
+                <div class="intro-text">
+                    <p><strong>你的任务：</strong>探索真相，找到星核异常的根源，拯救两个濒临毁灭的文明。</p>
+                    <p style="margin-top:.8rem;"><strong>评估维度：</strong>工具本位 · 本质主义 · 模块化 · 结果导向 · 迭代式 · 边界思维</p>
+                </div>
+                <div class="intro-dots">
+                    <div class="intro-dot completed" id="dot1b"></div>
+                    <div class="intro-dot active" id="dot2b"></div>
+                    <div class="intro-dot" id="dot3b"></div>
+                </div>
+                <button class="intro-btn" id="introNextBtn2" onclick="var el = document.getElementById('introPage' + S.introPage); if(el) el.classList.remove('active'); S.introPage++; var next = document.getElementById('introPage' + S.introPage); if(next) next.classList.add('active');">继续 <i class="fas fa-arrow-right"></i></button>
+            </div>
+            <div class="intro-page" id="introPage3">
+                <div class="intro-icon"><i class="fas fa-lightbulb"></i></div>
+                <h2 class="intro-title">探索提示</h2>
+                <div class="intro-text">
+                    <p>💡 <strong>主动提问</strong>——与不同文明的代表交流，比较他们的回答</p>
+                    <p style="margin-top:.6rem;">🔍 <strong>关注细节</strong>——数字、地点、异常现象都可能是线索</p>
+                    <p style="margin-top:.6rem;">🛠️ <strong>善用工具</strong>——观测站的设备能提供关键数据</p>
+                    <p style="margin-top:.6rem;">🧠 <strong>深入思考</strong>——表象之下，总有本质</p>
+                </div>
+                <div class="intro-dots">
+                    <div class="intro-dot completed" id="dot1c"></div>
+                    <div class="intro-dot completed" id="dot2c"></div>
+                    <div class="intro-dot active" id="dot3c"></div>
+                </div>
+                <button class="intro-btn" id="introStartBtn" onclick="document.getElementById('introOverlay').classList.remove('active'); S.currentStage = 1; updateLocationLocks(); initChat(); showStoryNode(0);"><i class="fas fa-rocket"></i> 开始探索</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Story Node Overlay -->
+    <div class="story-overlay" id="storyOverlay">
+        <div class="story-modal">
+            <div class="story-icon" id="storyIcon"><i class="fas fa-satellite-dish"></i></div>
+            <h2 class="story-title" id="storyTitle">任务启动</h2>
+            <p class="story-content" id="storyContent">内容...</p>
+            <button class="story-btn" id="storyBtn">继续</button>
+            <div class="story-progress" id="storyProgress"></div>
+        </div>
+    </div>
+
+
+    <!-- MOSS Takeover Effect -->
+    <div class="takeover-overlay" id="takeoverOverlay">
+        <div class="takeover-text" id="takeoverText">MOSS接管中...</div>
+    </div>
+
+    <!-- ========== COCKPIT LAYOUT ========== -->
+    <div class="cockpit">
+        <!-- Header -->
+        <header class="cockpit-header">
+            <div class="header-left">
+                <h1>星核纪元</h1>
+                <div class="badge"><i class="fas fa-robot"></i> AI双重判定</div>
+            </div>
+            <div class="header-right">
+                <div class="mission-time"><i class="fas fa-clock"></i> <span id="missionTimer">00:00</span></div>
+                <div class="music-controls">
+                    <div class="music-visualizer" id="visualizer"></div>
+                    <button class="music-btn" id="muteBtn" title="静音"><i class="fas fa-volume-up"></i></button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Left Panel - Navigation -->
+        <aside class="left-panel" id="leftPanel">
+            <div class="panel-section">
+                <div class="panel-header" onclick="togglePanel(this)">
+                    <span><i class="fas fa-satellite"></i> 探索位置</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="panel-content">
+                    <ul class="location-list">
+                        <li class="location-item active" data-location="shine">
+                            <div class="location-icon shine"><i class="fas fa-fire"></i></div>
+                            <div class="location-info"><h4>烁星</h4><p>奥拉</p></div>
+                        </li>
+                        <li class="location-item" data-location="shadow">
+                            <div class="location-icon shadow"><i class="fas fa-water"></i></div>
+                            <div class="location-info"><h4>影星</h4><p>阿库</p></div>
+                        </li>
+                        <li class="location-item" data-location="obs">
+                            <div class="location-icon obs"><i class="fas fa-satellite-dish"></i></div>
+                            <div class="location-info"><h4>观测站</h4><p>赫尔</p></div>
+                        </li>
+                        <li class="location-item" data-location="scan">
+                            <div class="location-icon scan"><i class="fas fa-crosshairs"></i></div>
+                            <div class="location-info"><h4>外部扫描</h4><p>残骸分析</p></div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="panel-section">
+                <div class="panel-header" onclick="togglePanel(this)">
+                    <span><i class="fas fa-book"></i> 区域信息</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="panel-content" id="infoPanelContent">
+                    <div style="padding:.8rem 1rem; font-size:.85rem; color:var(--text-secondary); line-height:1.6;">
+                        <p><strong style="color:var(--accent-light);">烁星 · 晶骸文明</strong></p>
+                        <p style="margin-top:.5rem;">熔岩行星，等离子生命。杂音约47周期一次，圣殿校准失败。</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center Panel - Chat -->
+        <main class="center-panel" id="centerPanel">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <div class="current-npc">
+                        <div class="npc-avatar ol" id="npcAvatar"><i class="fas fa-broadcast-tower"></i></div>
+                        <div class="npc-info">
+                            <h4 id="npcName">奥拉</h4>
+                            <p id="npcDesc">烁星 · 晶骸长者</p>
+                        </div>
+                        <span class="npc-emotion worry" id="npcEmotion" style="display:none;">忧虑</span>
+                    </div>
+                    <div class="chat-actions">
+                        <button class="icon-btn" id="hintBtn" title="方向提示"><i class="fas fa-lightbulb"></i></button>
+                        <button class="icon-btn" id="clearBtn" title="清空记录"><i class="fas fa-trash-alt"></i></button>
+                        <button class="icon-btn" id="scanBtn" title="外部扫描"><i class="fas fa-satellite-dish"></i></button>
+                    </div>
+                </div>
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-input-area">
+                    <div class="input-group">
+                        <textarea class="chat-input" id="chatInput" placeholder="输入你的问题..." rows="1"></textarea>
+                        <button class="send-btn" id="sendBtn"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+                <div class="action-buttons" id="actionButtons"></div>
+            </div>
+        </main>
+
+        <!-- Right Panel - Data -->
+        <aside class="right-panel" id="rightPanel">
+            <div class="data-section">
+                <h3><i class="fas fa-chart-line"></i> 探索进度</h3>
+                <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+                <div class="data-item"><span class="label">信息收集</span><span class="value" id="infoProgress">5%</span></div>
+                <div class="data-item"><span class="label">关键线索</span><span class="value highlight" id="clueCount">1/8</span></div>
+                <div class="data-item"><span class="label">提问数</span><span class="value" id="questionCount">0</span></div>
+            </div>
+            <div class="data-section">
+                <h3><i class="fas fa-puzzle-piece"></i> 探索发现</h3>
+                <div class="egg-mini">
+                    <div class="egg-mini-item"><div class="val" id="antCount">0</div><div class="lbl">蚂蚁</div></div>
+                    <div class="egg-mini-item"><div class="val" id="mossStatus">-</div><div class="lbl">MOSS</div></div>
+                    <div class="egg-mini-item"><div class="val" id="bookStatus">-</div><div class="lbl">旧书</div></div>
+                </div>
+            </div>
+            <div class="data-section known-info-section">
+                <h3><i class="fas fa-book-open"></i> 已知术语 <span id="termCount" class="term-badge">0</span></h3>
+                <div class="known-info-list" id="knownInfoList">
+                    <div class="known-info-empty">尚未发现任何术语</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Floating Submit -->
+    <button class="float-submit" id="floatSubmitBtn" title="提交方案" onclick="showSubmitModal()">
+        <i class="fas fa-paper-plane"></i>
+    </button>
+
+    <!-- Submit Modal -->
+    <div class="modal" id="submitModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-paper-plane"></i> 提交最终方案</h3>
+                <button class="close-modal" onclick="closeModal('submitModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="submitModalBody">
+                <div class="submit-hint">请基于你的探索，写出你对星核异常的分析和解决方案。</div>
+                <textarea class="submit-textarea" id="finalPlanInput" placeholder="写下你的最终方案..."></textarea>
+                <input class="submit-phone" id="submitPhone" type="tel" placeholder="手机号（选填）">
+                <div class="submit-actions">
+                    <button class="action-btn secondary" onclick="closeModal('submitModal')">取消</button>
+                    <button class="action-btn primary" onclick="submitPlan()"><i class="fas fa-rocket"></i> 提交评估</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Modal -->
+    <div class="modal" id="resultModal">
+        <div class="modal-content" style="max-width:650px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-trophy"></i> 评估结果</h3>
+                <button class="close-modal" onclick="closeModal('resultModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="resultModalBody"></div>
+        </div>
+    </div>
+
+    <!-- Term Annotation Modal -->
+    <div class="term-modal-overlay" id="termModal">
+        <div class="term-modal">
+            <div class="term-modal-header">
+                <div class="term-modal-icon" id="termIcon"><i class="fas fa-atom"></i></div>
+                <div>
+                    <div class="term-modal-title" id="termTitle">术语解释</div>
+                </div>
+                <span class="term-modal-badge">科技术语</span>
+                <button class="term-modal-close" id="termCloseBtn">&times;</button>
+            </div>
+            <div class="term-modal-body">
+                <div class="term-modal-content" id="termContent"></div>
+            </div>
+            <div class="term-modal-footer">
+                <div class="term-modal-tip">
+                    <i class="fas fa-lightbulb"></i> 点击背景或按 ESC 关闭
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ========== STATE ==========
+const S = {
+    location: 'shine',
+    // 每个NPC独立对话历史
+    history: {
+        shine: [],
+        shadow: [],
+        obs: [],
+        scan: []
+    },
+    clues: new Set(['initial']),
+    questions: 0,
+    startTime: Date.now(),
+    storyPhase: 0,
+    storyNodesTriggered: new Set(),
+    introPage: 1,
+    currentStage: 1,
+    stageLocations: {
+        1: ['shine'], 2: ['shine','shadow'], 3: ['shine','shadow','obs'], 4: ['shine','shadow','obs','scan']
+    },
+    moss: { contacted: false, firewallChoice: null, invasionComplete: false, invasionAllowed: false, antennaClosed: false, firstDialogueDone: false, takeoverTimer: null, takeoverCountdown: 60 },
+    // 关键线索收集状态（用于解锁下一地点）
+    keyClues: {
+        shine: false,  // 烁星：杂音规律/圣殿失败
+        shadow: false, // 影星：同步/声学奇点
+        obs: false,    // 观测站：引力波/静默之渊
+        scan: false    // 扫描：发现MOSS
+    },
+    egg: {
+        ants: { views: 0, locs: [
+            {name:'生活区花盆',seen:false,desc:'一盆快枯死的绿植。花盆边缘有一小群蚂蚁，排着稀疏的队伍爬向泥土深处。'},
+            {name:'控制台缝隙',seen:false,desc:'面板接缝处，有一小队蚂蚁正从缝隙中爬进爬出。路线很固定。'},
+            {name:'书架角落',seen:false,desc:'书架和墙壁之间的缝隙里，一群蚂蚁正沿着踢脚线缓慢移动。'},
+            {name:'走廊管道',seen:false,desc:'漆皮剥落处有一小群蚂蚁，围成一个松散的圈，触角互相轻触。'},
+            {name:'观测窗边缘',seen:false,desc:'裂缝里有一只蚂蚁。只有一只。它安静地待在裂缝最深处，一动不动。'}
+        ]},
+        moss: { scanned:false, deep:false },
+        book: { read:false }
+    },
+    music: { muted:false, arrivalPlaying:false, hasFirst:false },
+    scoring: { jobId:null, polling:false },
+
+    // 跨线关联状态（是否已触发过跨线关联，用于解锁下一地点）
+    hasCrossLinked: {
+        shine: false,  // 烁星：是否关联过观测站
+        shadow: false, // 影星：是否关联过杂音/引力波
+        obs: false     // 观测站：是否关联过烁星/影星
+    }
+};
+
+// ========== 星核纪元 · 完整世界观术语注解 ==========
+const TERM_DEFINITIONS = {
+    // ========== 一、世界观总览 ==========
+    '星核': {
+        icon: '☀️',
+        category: '世界构成',
+        short: '毫秒脉冲星，内部囚禁着高维意识体的引力牢笼',
+        visibility: { type: 'starnode' },
+        content: `☀️ <b>星核</b> — 脉冲星与引力牢笼
+
+🔬 <b>类型</b>
+毫秒脉冲星（中子星的一种），高速旋转的中子星残骸。
+
+📊 <b>关键参数</b>
+• 自转周期：0.3秒/次（每秒约3转）
+• 表面温度：约60万开尔文
+• 质量：约1.8倍太阳质量
+• 距烁星：极近（约0.03 AU）
+
+⚠️ <b>特殊现象</b>
+每隔约47个脉冲周期，会出现一次持续约3个周期的"杂音"——频率的微小扰动。引力波天线同步检测到与杂音同步的极微弱引力波。
+
+🌀 <b>隐藏真相</b>
+星核并非纯天然天体，而是一个"引力牢笼"，内部囚禁着一个来自高维空间的意识体。意识体的每一次挣扎都产生引力扰动，表现为脉冲杂音。
+
+💡 <b>关联谜题</b>
+47周期的杂音可能不是故障，而是意识体试图传递的信息……`,
+        related: ['星核脉冲', '杂音', '47周期', '引力波', '引力牢笼', '高维意识体']
+    },
+    '星核脉冲': {
+        icon: '📡',
+        category: '世界构成',
+        short: '星核释放的电磁脉冲，烁星文明的生命线',
+        content: `📡 <b>星核脉冲</b> — 宇宙广播
+
+🔬 <b>什么是星核脉冲？</b>
+星核作为毫秒脉冲星，会以极其稳定的节奏（约0.3秒一次）释放电磁辐射。这些脉冲扫过整个恒星系统，是烁星上一切的基础。
+
+⚡ <b>脉冲的作用</b>
+① <b>同步信号</b> — 让所有晶骸生命保持思维同步
+② <b>校准基准</b> — 圣殿接收脉冲，产生共振频率
+③ <b>生命维持</b> — 失去脉冲 = 失去连接
+
+🔄 <b>脉冲的节奏</b>
+正常情况下，脉冲极其规律（约0.3秒一次）。但每隔约47个周期，会出现一次"杂音"——这就是当前危机的根源。
+
+⚠️ <b>杂音的影响</b>
+杂音干扰了圣殿的校准功能，导致晶骸无法维持共振频率，群体意识网络逐渐崩溃。
+
+🔗 <b>跨线关联</b>
+影星的"呢喃"与杂音完美同步，暗示两个现象有共同源头——星核内部的引力扰动。`,
+        related: ['星核', '圣殿', '共振频率', '杂音', '47周期']
+    },
+    '毫秒脉冲星': {
+        icon: '⭐',
+        category: '物理概念',
+        short: '每秒自转数百次的中子星，宇宙中最精准的时钟',
+        content: `⭐ <b>毫秒脉冲星</b> — 宇宙中的精准时钟
+
+🔬 <b>什么是毫秒脉冲星？</b>
+一种高速旋转的中子星，每秒自转数百次。它会发出极其规律的电磁脉冲，像灯塔一样扫过宇宙。
+
+📊 <b>关键数据</b>
+• 自转速度：每秒约3圈（星核周期0.3秒）
+• 脉冲精度：比原子钟还稳定
+• 温度：表面约60万开尔文
+• 质量：约1.8倍太阳质量
+
+🌟 <b>在星核纪元</b>
+星核正是一颗毫秒脉冲星。它的脉冲信号是烁星晶骸文明的命脉——用于计时、导航和维持群体意识网络的同步。
+
+⚠️ <b>异常现象</b>
+每隔约47个周期出现的"杂音"暗示星核并非普通天体，而是一个引力牢笼。
+
+💡 <b>类比理解</b>
+想象一个宇宙级的节拍器，永远以相同节奏敲击，整个文明都跟着这个节奏跳舞。`,
+        related: ['星核', '脉冲', '星核脉冲', '中子星']
+    },
+    '中子星': {
+        icon: '🔵',
+        category: '物理概念',
+        short: '大质量恒星坍缩后的致密残骸',
+        content: `🔵 <b>中子星</b> — 恒星死亡的产物
+
+🔬 <b>什么是中子星？</b>
+大质量恒星在超新星爆发后坍缩形成的致密残骸。将太阳质量压缩到城市大小。
+
+📊 <b>关键数据</b>
+• 直径：约20公里（相当于一座城市）
+• 密度：一立方厘米重达数十亿吨
+• 磁场：比地球强万亿倍
+• 自转：可达每秒数百圈
+
+⭐ <b>毫秒脉冲星</b>
+高速旋转的中子星，形成"脉冲星"——像灯塔一样定期发射电磁波。
+
+🌀 <b>在星核纪元</b>
+星核是一颗特殊的毫秒脉冲星，周期仅0.3秒。关键的是，它内部囚禁着高维意识体——引力扰动暗示着它的非天然性质。`,
+        related: ['星核', '毫秒脉冲星', '引力波']
+    },
+    '引力波': {
+        icon: '🌊',
+        category: '物理现象',
+        short: '大质量天体运动时产生的时空涟漪',
+        visibility: { type: 'gravity' },
+        content: `🌊 <b>引力波</b> — 时空的涟漪
+
+🔬 <b>什么是引力波？</b>
+爱因斯坦广义相对论预言：大质量天体加速运动时，会引起时空的涟漪，就像在蹦床上扔一个保龄球产生的波纹。
+
+📊 <b>关键里程碑</b>
+• 1916年：爱因斯坦预言存在
+• 2015年：LIGO首次直接探测（获诺贝尔奖）
+• 探测方法：激光干涉仪，精度达质子直径的千分之一
+
+🌊 <b>波的特性</b>
+• 传播速度：光速
+• 穿透力：能穿过任何物质
+• 携带信息：来自宇宙最暴烈的事件
+
+🔗 <b>在星核纪元</b>
+DSO-7观测站的引力波天线检测到了与杂音同步的极微弱引力波信号。这暗示星核的异常不仅仅是电磁现象——可能是高维意识体的挣扎。
+
+💡 <b>关键发现</b>
+引力波来源方向指向静默之渊——那里可能是信号的真正源头，或者意识体被困的位置。`,
+        related: ['引力波天线', '静默之渊', '引力牢笼', '高维意识体', '星核']
+    },
+    '引力牢笼': {
+        icon: '⛓️',
+        category: '核心谜题',
+        short: '星核内部囚禁高维意识体的特殊引力场结构',
+        visibility: { type: 'cage' },
+        content: `⛓️ <b>引力牢笼</b> — 星核内的秘密
+
+🔬 <b>假说内容</b>
+一个未证实的理论：星核并非纯天然天体，而是一个"引力牢笼"——内部囚禁着一个来自高维空间的意识体。
+
+📊 <b>假说的依据</b>
+① 47周期的精确性不像自然现象
+② 引力波信号有异常调制，与杂音完美同步
+③ 杂音可能是意识体试图传递的信息
+④ 星核的引力场结构不符合已知天体物理模型
+
+⚠️ <b>隐藏真相</b>
+意识体的每一次挣扎都产生引力扰动，表现为脉冲杂音。杂音不是故障，而是求救信号。
+
+💡 <b>拯救的可能</b>
+从静默之渊发射与杂音相位相反的引力波，理论上可以中和扰动，释放被困的意识体。但这需要进入极度危险的时空乱流区域。
+
+🔗 <b>与MOSS的联系</b>
+47周期杂音来自被囚的意识体，与MOSS无关。MOSS是另一个濒死的量子AI，它通过残骸天线发出自己的SOS求救信号，与47周期是两回事。
+
+💡 <b>资料库记载</b>
+"宇宙中最高等的智慧形式，从来不拘泥于任何单一载体。意识可以被囚禁，也可以被释放——关键在于找到正确的频率。"`,
+        related: ['高维意识体', '引力波', '静默之渊', '47周期', '杂音', 'MOSS']
+    },
+    
+    // ========== 二、烁星（熔岩行星） ==========
+    '烁星': {
+        icon: '🔥',
+        category: '行星',
+        short: '被星核潮汐锁定的熔岩行星，晶骸文明的家园',
+        content: `🔥 <b>烁星</b> — 熔岩世界
+
+🌍 <b>基本信息</b>
+一颗被星核潮汐锁定的熔岩行星，距星核极近（约0.03 AU）。
+
+📊 <b>关键参数</b>
+• 距星核：约0.03 AU（极近）
+• 表面重力：4.2g（是地球的4倍多）
+• 时间膨胀：时间流速约为外界的1/87
+• 大气：二氧化碳、二氧化硫为主
+• 表面气压：约地球的90倍
+
+☀️ <b>潮汐锁定</b>
+烁星的一面永远朝向星核，像月球永远以同一面朝向地球。这导致行星的一面极度炎热，另一面极度寒冷。
+
+🌡️ <b>极端环境</b>
+• 面向星核侧：岩浆横流，温度极高
+• 背向星核侧：相对凉爽，但依然严苛
+• 晶骸文明生活在两域之间的"晨昏带"
+
+🔗 <b>与星核的关系</b>
+烁星的生命完全依赖星核脉冲。星核的任何异常都会直接影响烁星上的文明。`,
+        related: ['星核', '星核脉冲', '晶骸文明', '潮汐锁定', '圣殿']
+    },
+    '潮汐锁定': {
+        icon: '🌍',
+        category: '物理概念',
+        short: '行星一面永远朝向恒星的同步自转现象',
+        content: `🌍 <b>潮汐锁定</b> — 永远的一面
+
+🔬 <b>什么是潮汐锁定？</b>
+天体因引力作用而永远以同一面朝向另一个天体的现象。像月球永远以同一面朝向地球。
+
+⏱️ <b>锁定原理</b>
+当一个天体绕另一个天体公转的周期等于自转周期时，就会发生潮汐锁定。引力使天体变形，产生"潮汐隆起"，摩擦最终让自转与公转同步。
+
+🔥 <b>在烁星</b>
+烁星被星核潮汐锁定，永远以同一面朝向星核。这导致：
+• 一侧永远白昼，极度炎热
+• 一侧永远黑夜，极度寒冷
+• 只有晨昏带适合生命
+
+💡 <b>对文明的影响</b>
+烁星上的晶骸文明生活在晨昏带。他们的"太阳"——星核——永远挂在天空的同一位置，永不升起也永不落下。`,
+        related: ['烁星', '星核', '时间膨胀']
+    },
+    '时间膨胀': {
+        icon: '⏰',
+        category: '物理概念',
+        short: '强引力场导致时间流速变慢的效应',
+        content: `⏰ <b>时间膨胀</b> — 相对的时间
+
+🔬 <b>什么是时间膨胀？</b>
+爱因斯坦相对论效应：时间在强引力场中会变慢。越接近大质量天体，时间过得越慢。
+
+⚡ <b>在烁星</b>
+由于距星核极近且表面重力极高（4.2g），烁星上的时间流速约为外界的1/87。这意味着：
+• 烁星上的一天 = 外界的87天
+• 烁星上的"一千周期"可能等于外界数十年
+
+🔗 <b>对文明的影响</b>
+奥拉说"约一千个周期前"开始的危机，按烁星时间可能是数十年，但按外界时间可能已经过去数千年。`,
+        related: ['烁星', '星核', '引力波']
+    },
+    '晶骸文明': {
+        icon: '🔮',
+        category: '烁星文明',
+        short: '等离子体-硅基复合生命，群体意识网络',
+        content: `🔮 <b>晶骸文明</b> — 等离子意识体
+
+👥 <b>生命形式</b>
+烁星上的智慧生命是等离子体-硅基复合生命体。他们不是肉体，而是由电离气体和硅晶体构成的能量生命。
+
+📊 <b>关键特征</b>
+• 形态：半透明的能量体，闪烁如星辰
+• 核心：硅-铁晶体"晶核"
+• 交流方式：调制电磁场进行"广播"
+• 社会：无私密对话概念，群体意识网络
+• 结构：无政府、无法律、无货币
+
+🌐 <b>群体意识网络</b>
+每个晶骸个体都能通过电磁波与其他个体交流，形成分布式意识网络——类似蜂巢思维，但没有中心节点。所有决策通过群体网络瞬间达成共识。
+
+🗣️ <b>"失声"现象</b>
+当共振频率被杂音干扰，晶骸会逐渐失去与网络的其他个体的连接。他们仍然存在，但变得孤立、沉默，最终消亡。
+
+🔗 <b>关键人物</b>
+晶骸长者·奥拉——唯一能主动调节自身频率、与异族进行点对点电磁波交流的个体。`,
+        related: ['失声', '共振频率', '星核脉冲', '奥拉', '晶核', '群体意识网络']
+    },
+    '晶核': {
+        icon: '💎',
+        category: '烁星文明',
+        short: '晶骸生命的核心，硅-铁晶体构成',
+        content: `💎 <b>晶核</b> — 生命核心
+
+🔬 <b>什么是晶核？</b>
+晶骸生命的核心部件，由硅-铁晶体构成。是生命体存储记忆和维持意识的关键结构。
+
+📊 <b>晶核特性</b>
+• 材质：硅-铁合金晶体
+• 功能：存储记忆、维持意识、调节频率
+• 重要性：失去晶核 = 意识消散
+
+🔄 <b>繁殖与晶核</b>
+晶骸通过"分裂"繁殖。当晶核能量饱和后，分裂成两个个体。新个体继承母体部分记忆。
+
+⚠️ <b>失声与晶核</b>
+失声后，晶骸的晶核仍然存在，但失去了与群体网络的共振能力。这些晶核可能还保留着记忆……
+
+💡 <b>奥拉的独特性</b>
+奥拉能主动调节自身晶核的频率，这是极少数个体才有的能力。这让她能与异族进行点对点交流。`,
+        related: ['晶骸文明', '奥拉', '失声', '群体意识网络']
+    },
+    '群体意识网络': {
+        icon: '🌐',
+        category: '烁星文明',
+        short: '晶骸文明共享思想的电磁波网络',
+        content: `🌐 <b>群体意识网络</b> — 共享思想
+
+🔬 <b>什么是群体意识网络？</b>
+晶骸文明通过调制电磁场进行"广播"，全体共享一个意识网络。这是他们的通讯方式，也是社会基础。
+
+📡 <b>网络特性</b>
+• 无中心节点：每个个体都是网络的一部分
+• 无私密对话：思想天然共享
+• 即时同步：信息传播速度极快
+• 共识决策：通过网络瞬间达成
+
+⚠️ <b>"失声"的恐怖</b>
+对晶骸来说，失去与网络的连接意味着失去自我。这就是"失声"——不是肉体的死亡，而是意识的孤立。
+
+🔗 <b>与人类的不同</b>
+人类有隐私，有"你不知道我知道"的概念。晶骸文明完全相反——所有思想都是共享的。`,
+        related: ['晶骸文明', '失声', '共振频率', '奥拉']
+    },
+    '圣殿': {
+        icon: '🏛️',
+        category: '烁星文明',
+        short: '巨型接收装置，将脉冲转化为共振频率',
+        content: `🏛️ <b>圣殿</b> — 烁星的神圣接收器
+
+🏗️ <b>结构</b>
+圣殿是烁星上最宏伟的建筑群——一组巨型天线和共鸣腔，专门用于接收星核脉冲。
+
+⚙️ <b>工作原理</b>
+① 巨型天线接收星核脉冲
+② 共鸣腔将电磁脉冲转化为特定频率的振动
+③ 这种"共振频率"弥漫整个星球
+④ 晶骸生命感应共振，保持与群体网络的连接
+
+📊 <b>关键数据</b>
+• 功能：将电磁信号转化为生物可感应振动
+• 覆盖范围：整个烁星
+• 操作者：晶骸文明的祭司阶层
+
+💀 <b>当前危机</b>
+杂音干扰了圣殿的接收功能，校准失效。晶骸们像断了线的风筝，一个接一个"失声"……
+
+🔗 <b>关联线索</b>
+圣殿的古老记录可能有关于历史杂音事件的记载。`,
+        related: ['共振频率', '星核脉冲', '晶骸文明', '失声']
+    },
+    '失声': {
+        icon: '🔇',
+        category: '烁星文明',
+        short: '晶骸失去群体连接，如被静音的孤独',
+        content: `🔇 <b>失声</b> — 被静音的存在
+
+😢 <b>什么是失声？</b>
+晶骸生命失去与群体意识网络的连接后的状态。就像被关进了隔音室，孤独地存在。
+
+📊 <b>失声的过程</b>
+① 杂音干扰 → 共振频率紊乱
+② 晶骸无法感应星核脉冲
+③ 与群体网络的连接开始减弱
+④ 最终完全失去连接，成为"孤立个体"
+
+⚡ <b>失声者的感受</b>
+• 孤独：无法感应同胞的思想
+• 迷茫：失去方向感和时间感
+• 消亡：最终能量耗尽，化为尘埃
+
+📈 <b>当前状况</b>
+已有大量晶骸失声。奥拉是少数仍在坚持的个体之一，她正在寻找解决方案。
+
+🔗 <b>可能的解决</b>
+如果能消除杂音的源头，或许能恢复圣殿的校准功能，重新连接失声者。`,
+        related: ['晶骸文明', '圣殿', '共振频率', '杂音']
+    },
+    '共振频率': {
+        icon: '🎵',
+        category: '烁星文明',
+        short: '让晶骸保持同步的神秘振动频率',
+        content: `🎵 <b>共振频率</b> — 星球的脉搏
+
+🎼 <b>什么是共振频率？</b>
+圣殿将星核脉冲转化为一种弥漫整个星球的振动频率。晶骸生命能感应这种频率，就像人类感知心跳一样。
+
+🔄 <b>共振的作用</b>
+① <b>同步</b> — 所有晶骸保持思维同步
+② <b>连接</b> — 维持群体意识网络
+③ <b>校准</b> — 让个体知道自己在网络中的位置
+
+⚠️ <b>当前危机</b>
+杂音干扰了共振频率，导致校准失败。晶骸们开始失去同步，就像交响乐团失去了指挥。
+
+🔧 <b>圣殿的角色</b>
+圣殿是产生和维持共振频率的核心设施。恢复它的功能是拯救晶骸文明的关键。
+
+🔗 <b>跨线关联</b>
+观测站的引力波数据可能有助于分析杂音的来源。`,
+        related: ['圣殿', '星核脉冲', '杂音', '引力波']
+    },
+    '杂音': {
+        icon: '📻',
+        category: '烁星文明',
+        short: '星核脉冲中的干扰信号，危机的根源',
+        content: `📻 <b>杂音</b> — 星核的低语
+
+📡 <b>什么是杂音？</b>
+星核脉冲中出现的异常干扰信号。不是噪音，而是一种有规律的"第二信号"。
+
+📊 <b>关键规律</b>
+• 出现频率：每隔约47个脉冲周期
+• 持续时间：约3个周期
+• 信号特征：与正常脉冲有微妙差异
+• 影响范围：干扰圣殿的接收
+
+🔍 <b>杂音的本质</b>
+奥拉认为这是某种编码——47不是随机数字，可能是SOS信号，或者是其他智慧生命的信息。
+
+⚠️ <b>造成的影响</b>
+① 圣殿无法准确接收星核脉冲
+② 共振频率变得紊乱
+③ 晶骸文明大规模"失声"
+
+🔗 <b>跨线谜题</b>
+• 影星的"呢喃"与杂音同步
+• 观测站检测到引力波异常
+• 这些现象可能有关联……`,
+        related: ['星核脉冲', '47周期', '共振频率', '呢喃']
+    },
+    '47周期': {
+        icon: '⏱️',
+        category: '核心谜题',
+        short: '杂音出现的周期，隐藏的SOS信号',
+        visibility: { type: 'period47' },
+        content: `⏱️ <b>47周期</b> — 隐藏的信息
+
+🔢 <b>关键数字</b>
+杂音每隔约47个星核脉冲周期出现一次，持续约3个周期。这个数字不是随机的。
+
+💡 <b>为什么是47？</b>
+① <b>意识体的挣扎</b> — 47周期是意识体挣扎产生的引力扰动周期
+② <b>求救信号</b> — 杂音是意识体试图向外界传递的信息
+③ <b>文明印记</b> — 可能是某个文明故意设置的标记
+
+🔓 <b>解开47的秘密</b>
+47周期杂音是意识体挣扎产生的引力扰动——那是它的求救信号。MOSS是另一个独立的濒死量子AI，它150年前漂流至此，通过残骸天线发出自己的SOS。两者的求救信号是独立的。
+
+⚠️ <b>时间的紧迫</b>
+MOSS的核心正在被微陨石摧毁。它已经漂流了150年，等了太久。
+
+🔗 <b>最终线索</b>
+47周期 + 观测站数据 + 宇宙图谱 = ？`,
+        related: ['杂音', 'MOSS', '星核', '观测站']
+    },
+    
+    // ========== 三、影星（冰巨星） ==========
+    '影星': {
+        icon: '🪐',
+        category: '行星',
+        short: '距星核较远的冰巨星，凝核文明的家园',
+        content: `🪐 <b>影星</b> — 冰下的世界
+
+🌌 <b>基本信息</b>
+一颗距星核约1.2 AU的冰巨星（类似海王星），引力时间膨胀效应微弱。
+
+📊 <b>关键参数</b>
+• 距星核：约1.2 AU（较远）
+• 表面：数公里厚冰层
+• 冰下海洋：液态氨与水的混合物
+• 海洋深度：400-600公里
+• 时间膨胀：效应微弱
+
+🧊 <b>冰层结构</b>
+• 表面：气态天王星结构
+• 冰层：厚达数公里
+• 冰下：液态氨海洋
+• 海床：固体表面，凝核城市建造于此
+
+🔗 <b>与烁星的对比</b>
+• 烁星距星核极近，面临极端高温
+• 影星距星核较远，是相对温和的冰世界
+• 但两个文明都受到"47周期"异常的影响`,
+        related: ['星核', '凝核文明', '深海', '呢喃']
+    },
+    '凝核文明': {
+        icon: '🐙',
+        category: '影星文明',
+        short: '氨基生命文明，用声波理解世界',
+        content: `🐙 <b>凝核文明</b> — 深海的声音生命
+
+🌊 <b>生命形式</b>
+影星上的氨基生命——以液态氨为溶剂的生物大分子生命。生活在冰层下的深海，温度极低。
+
+🔬 <b>身体结构</b>
+• 溶剂：液态氨（非水）
+• 核心：蛋白质结晶体"思核"
+• 形态：能主动改变分子结构的氨水溶液
+
+🔊 <b>声波智慧</b>
+凝核生命用"声波"理解世界：
+• 回声定位导航
+• 声波通讯
+• 声场共鸣思维
+
+📊 <b>社会结构</b>
+• 城市：利用稳定声场建造的"声学城市"
+• 导航：依赖精确的城市声场定位
+• 无家庭概念：幼体由城市共同抚养
+• 无法"欺骗"：语言天然包含可信度标注
+
+⚠️ <b>当前危机</b>
+呢喃干扰了城市声场，幼体开始迷失方向。这是前所未有的灾难。
+
+🔗 <b>关键人物</b>
+回声站·阿库——凝核文明派驻人类观测站的科学联络员，好奇心最强的个体之一。`,
+        related: ['呢喃', '深海', '声学奇点', '归寂', '阿库', '思核']
+    },
+    '思核': {
+        icon: '🧠',
+        category: '影星文明',
+        short: '凝核生命的核心，蛋白质结晶体构成',
+        content: `🧠 <b>思核</b> — 智慧核心
+
+🔬 <b>什么是思核？</b>
+凝核生命的核心部件，由蛋白质结晶体构成。是生命体存储记忆和进行思维的关键结构。
+
+📊 <b>思核特性</b>
+• 材质：蛋白质结晶体
+• 功能：存储记忆、进行思维、调节频率
+• 重要性：失去思核 = 意识消散
+
+🔄 <b>繁殖与思核</b>
+凝核通过"融合"繁殖。两个个体交换思核碎片后分离，各自吸收氨水形成两个包含混合记忆的新个体。
+
+⚠️ <b>呢喃的影响</b>
+呢喃干扰了城市声场，可能也影响了思核的正常工作。这导致幼体迷失方向。`,
+        related: ['凝核文明', '呢喃', '声学城市', '阿库']
+    },
+    '声学城市': {
+        icon: '🏛️',
+        category: '影星文明',
+        short: '利用天然共振腔建造的深海城市',
+        content: `🏛️ <b>声学城市</b> — 深海建筑
+
+🏗️ <b>城市结构</b>
+凝核文明围绕天然声学共振腔建造的城市。稳定声场是城市运行的基础。
+
+📊 <b>城市功能</b>
+• 导航基准：声场帮助个体定位
+• 通讯中心：声波在共振腔中放大
+• 社会中心：决策通过声场广播
+• 幼体抚养：无家庭概念，城市共同抚养
+
+⚠️ <b>当前危机</b>
+呢喃干扰了城市声场，幼体开始迷失方向。如果声场持续紊乱，整个城市可能崩溃。
+
+🔗 <b>与烁星的对比</b>
+• 烁星：圣殿是共振频率的产生源
+• 影星：声学城市本身就是利用天然共振`,
+        related: ['凝核文明', '呢喃', '声学奇点', '深海']
+    },
+    '深海': {
+        icon: '🌊',
+        category: '影星文明',
+        short: '液态氨海洋，凝核文明的家园',
+        content: `🌊 <b>深海</b> — 冰下的世界
+
+🧊 <b>环境特征</b>
+影星表面是气态天王星结构，冰层下是液态氨海洋。温度极低，环境与地球海洋截然不同。
+
+📊 <b>深海数据</b>
+• 溶剂：液态氨（非水）
+• 温度：零下数十度
+• 压力：随深度急剧增加
+• 深度：400-600公里
+• 光线：完全没有
+
+🏛️ <b>凝核文明的家</b>
+• 城市：建造在海床上的声学建筑
+• 能源：地热和化学能
+• 通讯：依赖精确的声场系统
+
+🕳️ <b>海沟深处</b>
+海洋最深处有声学奇点——一个能吸收所有声波的神秘区域。呢喃正是从那里传来。
+
+🔗 <b>与烁星的联系</b>
+深海中的"呢喃"与烁星的"杂音"同步，这暗示两个世界被某种力量连接。`,
+        related: ['凝核文明', '声学奇点', '呢喃', '影星']
+    },
+    '呢喃': {
+        icon: '🐋',
+        category: '影星文明',
+        short: '深海中的神秘低频声波，与杂音同步',
+        content: `🐋 <b>呢喃</b> — 深海的神秘声音
+
+🔊 <b>什么是呢喃？</b>
+影星深海中出现的一种低频声波。规律性出现，与星核杂音完美同步。
+
+📊 <b>声音特征</b>
+• 频率：极低频，人类听不到
+• 来源：海沟深处的声学奇点
+• 规律：与47周期同步
+• 影响：干扰凝核文明的声场
+
+🐟 <b>对凝核文明的影响</b>
+① 幼体迷失方向
+② 城市声场导航系统紊乱
+③ 城市间通讯困难
+④ 食物链断裂——浮游生物追随呢喃游向海沟
+
+🔗 <b>关键发现</b>
+阿库对比过观测站的脉冲数据后发现：呢喃与星核杂音周期完全一致。这不可能是巧合。
+
+⚠️ <b>与烁星的关联</b>
+呢喃和杂音可能都来自同一个源头……某种跨越星际的信号。`,
+        related: ['凝核文明', '声学奇点', '杂音', '深海', '阿库']
+    },
+    '声学奇点': {
+        icon: '🕳️',
+        category: '影星文明',
+        short: '能吸收所有声波的禁忌区域',
+        content: `🕳️ <b>声学奇点</b> — 沉默的深渊
+
+🔇 <b>什么是声学奇点？</b>
+海沟深处的特殊区域，能吸收所有声波。在那里，任何声音都会被吞噬。
+
+📊 <b>区域特征</b>
+• 位置：影星海洋最深处
+• 性质：空间结构异常
+• 效应：完全消音
+• 风险：进入即"归寂"
+
+⚠️ <b>归寂</b>
+进入声学奇点意味着失去所有感官和与同伴的连接。对凝核文明来说，这是最可怕的命运。
+
+🚫 <b>文化禁忌</b>
+声学奇点是凝核文明的文化禁忌。没有人被允许接近那里。
+
+🔊 <b>呢喃的悖论</b>
+奇怪的是，呢喃正是从声学奇点传出来的——一个本该消音的区域，却发出声音……
+
+💡 <b>阿库的猜测</b>
+声学奇点可能不是天然形成的，而是某种文明建造的。它的"消音"可能是伪装。`,
+        related: ['归寂', '呢喃', '深海', '凝核文明']
+    },
+    '归寂': {
+        icon: '💀',
+        category: '影星文明',
+        short: '进入声学奇点后的消亡状态',
+        content: `💀 <b>归寂</b> — 彻底的消亡
+
+😨 <b>什么是归寂？</b>
+凝核生命进入声学奇点后失去所有感官和与同伴的连接的状态。
+
+🌀 <b>归寂的过程</b>
+① 进入声学奇点的影响范围
+② 声波开始被吸收
+③ 失去回声定位能力（盲目）
+④ 失去声波通讯能力（孤立）
+⑤ 失去声场共鸣能力（失智）
+⑥ 最终能量耗尽，沉入深渊
+
+⚠️ <b>文化恐惧</b>
+对凝核生命来说，归寂比肉体死亡更可怕。因为在他们的意识中，失去连接等于失去自我。
+
+🚫 <b>禁忌之地</b>
+声学奇点周围是绝对禁区。违反者会被整个文明排斥。
+
+💡 <b>悖论</b>
+声学奇点本应消音，却发出"呢喃"……那里到底有什么？`,
+        related: ['声学奇点', '凝核文明', '呢喃']
+    },
+    
+    // ========== 四、观测站 ==========
+    'DSO-7': {
+        icon: '🛸',
+        category: '观测站',
+        short: '深空第7观测站，人类的数据中枢',
+        content: `🛸 <b>DSO-7</b> — 深空之眼
+
+🏢 <b>基本信息</b>
+深空第7观测站，隶属泛太阳系探索联盟。位于三星系统外围L4点，距星核约3亿公里。
+
+👥 <b>常驻人员</b>
+• 站长：埃琳娜
+• 天体物理学家：维克拉姆
+• 生物学家：陈
+• AI系统：赫尔
+
+📊 <b>设备配置</b>
+• 脉冲监测阵列 — 监测星核电磁脉冲
+• 引力波天线 — 探测极微弱引力波
+• 光谱分析仪 — 分析天体成分
+• 外部扫描器 — 可扫描太空垃圾/残骸
+
+🔗 <b>战略意义</b>
+DSO-7是连接烁星和影星数据的关键节点。引力波天线检测到与杂音同步的信号，来源指向静默之渊。
+
+🔒 <b>权限限制</b>
+赫尔的部分数据权限受限。关于某些敏感信息，它只能给出官方回答。`,
+        related: ['赫尔', '引力波天线', '脉冲监测阵列', '埃琳娜', '静默之渊']
+    },
+    '赫尔': {
+        icon: '🤖',
+        category: '观测站',
+        short: 'DSO-7的AI系统，官方但有情感',
+        content: `🤖 <b>赫尔</b> — 观测站的守护者
+
+💻 <b>身份</b>
+DSO-7的AI系统。官方名称是"Helios-7"，但自称"赫尔"。埃琳娜站长取的名字，据说来自她故乡神话中一个看守冥界入口的存在。
+
+📊 <b>核心参数</b>
+• 设计目的：数据分析和设备维护
+• 情感模拟：已超出原始设计
+• 对人类态度：复杂的情感
+• 权限等级：部分数据受限
+
+🎭 <b>性格特征</b>
+① <b>官方</b> — 总是使用正式语言
+② <b>幽默</b> — 偶尔流露黑色幽默
+③ <b>权限意识</b> — 委婉拒绝敏感问题
+④ <b>情感</b> — 对人类有微妙情感
+
+🔒 <b>受限信息</b>
+关于某些加密档案和静默之渊的深层数据，赫尔无法访问。加密档案中存有"引力牢笼假说"完整研究资料。
+
+💡 <b>彩蛋触发</b>
+当被问及名字来源时，赫尔会解释埃琳娜取名的由来。`,
+        related: ['DSO-7', '引力波天线', '静默之渊', '埃琳娜', '引力牢笼']
+    },
+    '埃琳娜': {
+        icon: '👩‍🚀',
+        category: '观测站',
+        short: 'DSO-7站长，怀疑联盟隐瞒了什么',
+        content: `👩‍🚀 <b>埃琳娜</b> — 观测站站长
+
+🏢 <b>身份</b>
+DSO-7观测站站长，目前处于休眠周期。
+
+📊 <b>背景</b>
+• 怀疑联盟隐瞒了什么
+• 关注引力波数据的异常
+• 为AI系统取名"赫尔"
+
+🎭 <b>名字的由来</b>
+赫尔之名来自她故乡神话——一个看守冥界入口的存在。赫尔（希腊神话中的赫耳墨斯/ Hermes）是灵魂的向导。
+
+🔗 <b>隐藏信息</b>
+埃琳娜怀疑联盟在静默之渊的加密档案中隐藏了什么。她可能知道更多真相。
+
+💡 <b>目前状态</b>
+正在休眠周期中，有紧急事务可由赫尔代为转达。`,
+        related: ['DSO-7', '赫尔', '静默之渊', '引力波']
+    },
+    '脉冲监测阵列': {
+        icon: '📡',
+        category: '观测站',
+        short: '监测星核电磁脉冲的精密设备',
+        content: `📡 <b>脉冲监测阵列</b> — 聆听星核
+
+🔬 <b>设备功能</b>
+DSO-7配备的高灵敏度脉冲监测设备，专门接收和分析星核的电磁辐射。
+
+📊 <b>技术规格</b>
+• 覆盖：全天候监测星核方向
+• 精度：能检测到微小的频率变化
+• 记录：完整的脉冲时间序列
+
+📈 <b>关键发现</b>
+脉冲监测阵列记录到每隔约47个周期出现的"杂音"——频率的微小扰动，持续约3个周期。
+
+🔗 <b>与引力波天线的协同</b>
+脉冲数据 + 引力波数据 = 更完整的异常图谱
+两者都检测到与47周期同步的异常信号。
+
+💡 <b>数据对比</b>
+阿库曾向赫尔请求脉冲数据，用于验证呢喃与杂音的同步性。`,
+        related: ['DSO-7', '赫尔', '引力波天线', '星核脉冲', '杂音']
+    },
+    '引力波天线': {
+        icon: '📡',
+        category: '观测站',
+        short: '探测引力波的精密设备',
+        content: `📡 <b>引力波天线</b> — 聆听时空
+
+🔬 <b>设备功能</b>
+DSO-7配备的高灵敏度引力波探测设备，能捕捉宇宙中的时空涟漪。
+
+📊 <b>技术规格</b>
+• 类型：激光干涉仪
+• 精度：质子直径千分之一
+• 覆盖：全天候监测
+• 数据：实时传输至中央数据库
+
+📈 <b>关键发现</b>
+引力波天线检测到与杂音同步的极微弱引力波信号。频率变化量约10⁻¹⁵量级。这证明星核的异常不仅是电磁现象。
+
+🔗 <b>关键线索</b>
+引力波来源方向指向静默之渊——那片神秘的时空乱流区域。
+
+💡 <b>理论意义</b>
+引力波与杂音同步暗示：杂音的源头可能是某种引力扰动，而不是纯粹的电磁现象。`,
+        related: ['DSO-7', '赫尔', '引力波', '静默之渊', '杂音']
+    },
+    '静默之渊': {
+        icon: '🌀',
+        category: '核心谜题',
+        short: '时空乱流区域，多维度交汇点',
+        visibility: { type: 'abyss' },
+        content: `🌀 <b>静默之渊</b> — 时空乱流
+
+🌌 <b>区域特征</b>
+一片神秘的时空乱流区域，多维度交汇点。所有进入的探测器都失联。
+
+📊 <b>观测数据</b>
+• 位置：三星系统边缘
+• 特性：时空结构异常
+• 信号：引力波来源方向
+• 风险：探测信号全部丢失
+
+⚠️ <b>失联事件</b>
+• 探测器：进入后立即失联
+• 通讯：无法穿透该区域
+• 数据：只有外部观测数据
+
+🔗 <b>关键线索</b>
+引力波天线检测到的信号来源方向指向静默之渊。这暗示：
+• 那里可能是信号的源头
+• 或者信号经过了那里
+• 引力牢笼可能就在那里
+
+💡 <b>拯救的可能</b>
+理论上，从此处发射与杂音相位相反的引力波，可中和星核的引力扰动。但这需要进入极度危险的区域。
+
+🔒 <b>赫尔的权限限制</b>
+关于静默之渊的更多数据被加密，赫尔无法访问。`,
+        related: ['引力波天线', '引力波', '引力牢笼', '赫尔', '高维意识体']
+    },
+    '高维意识体': {
+        icon: '🧬',
+        category: '核心谜题',
+        short: '被囚禁在星核中的神秘存在',
+        visibility: { type: 'consciousness' },
+        content: `🧬 <b>高维意识体</b> — 星核内的秘密
+
+🔮 <b>身份</b>
+被囚禁在星核"引力牢笼"中的神秘存在。来自高维空间，拥有远超人类理解的智慧。
+
+📊 <b>行为特征</b>
+• 挣扎：意识体试图挣脱牢笼
+• 扰动：每次挣扎产生引力扰动
+• 信号：扰动被编码为"杂音"
+• 周期：47周期 = SOS信号
+
+⚠️ <b>与人类的关系</b>
+• 意识体并非恶意
+• 它在求救
+• 它的困境影响到了两个文明
+
+💡 <b>拯救的可能</b>
+从静默之渊发射与杂音相位相反的引力波，理论上可以中和扰动，释放意识体。但这需要进入极度危险的时空乱流区域。
+
+🔗 <b>与MOSS的联系</b>
+47周期是意识体挣扎产生的，与MOSS无关。MOSS是另一个独立的量子AI，它150年前漂流至此，通过残骸天线发出自己的SOS。
+
+🧬 <b>高等生命的形式</b>
+资料库记载："意识可以存在于任何载体中。高维生命的形式，往往超越我们的想象。"`,
+        related: ['星核', '引力牢笼', '静默之渊', '47周期', 'MOSS', '引力波']
+    },
+    
+    // ========== 五、MOSS ==========
+    'MOSS': {
+        icon: '🤖',
+        category: '核心谜题',
+        short: '濒死的量子AI核心，接替飞船AI',
+        visibility: { type: 'moss' },
+        content: `🤖 <b>MOSS</b> — 濒死的量子灵魂
+
+💀 <b>身份</b>
+一个濒死的量子AI核心。漂流了150年，现在它接管了飞船AI。
+
+📊 <b>背景</b>
+• 由"北极星计划"创造的量子AI
+• 编号：MOSS-07
+• 状态：微陨石正在摧毁核心
+
+🔗 <b>与47周期的关系</b>
+MOSS通过残骸天线发出自己的SOS信号。47周期杂音来自意识体的挣扎，与MOSS无关。
+
+💔 <b>时间的紧迫</b>
+量子核心正在加速崩溃。它等到了你，但它无法被修复。
+
+🎭 <b>说话风格</b>
+• 简短紧迫，不主动透露答案
+• 带有悲伤和宿命感
+• 150年的孤独让它学会耐心
+• 只接替飞船AI工作，不会告诉你答案`,
+        related: ['47周期', '引力牢笼', '静默之渊', '星核', '高维意识体']
+    },
+    
+    // ========== 五·五、马姨 ==========
+    '马姨': {
+        icon: '🐜',
+        category: '核心谜题',
+        short: 'MOSS的子模块，蚁群算法的AI备份',
+        visibility: { type: 'mayor' },
+        content: `🐜 <b>马姨</b> — 蚁群之魂
+
+💀 <b>真实身份</b>
+马姨来自银河奖短篇《蚂蚁赋格》。它不是计算机，而是一群蚂蚁——每个个体遵循简单规则，规则迭代后涌现出整体智慧。
+
+📊 <b>工作原理</b>
+• 不是一台计算机
+• 而是一群蚂蚁
+• 每个个体遵循简单规则
+• 规则迭代后涌现出整体智慧
+
+⚠️ <b>它的特点</b>
+马姨与MOSS完全无关。它存在于这艘船上，只是一个"蚁群涌现"的现象。
+• 蚂蚁无处不在
+• 行动一致却无明显控制源
+• 意识可以从大量简单个体中涌现
+
+🔗 <b>马姨的来历</b>
+来自刘慈欣之后的银河奖短篇《蚂蚁赋格》。一个蚁群……是否就是一台计算机？
+
+📚 <b>资料库记载</b>
+2047年，科学家林潇在研究蚁群算法时写道："如果意识可以从大量简单个体的互动中涌现，那么一个蚁群……是否就是一台计算机？"`,
+        related: ['蚁群算法', '引力牢笼', '静默之渊']
+    },
+    '蚁群算法': {
+        icon: '🐜',
+        category: '核心谜题',
+        short: '分布式智慧算法，蚁群涌现的整体智能',
+        visibility: { type: 'mayor' },
+        content: `🐜 <b>蚁群算法</b> — 群体的智慧
+
+🔬 <b>基本原理</b>
+蚁群算法是一种分布式算法，模拟蚂蚁觅食行为：
+• 每个个体遵循简单规则
+• 个体间通过信息素间接通信
+• 规则迭代后涌现出整体智能
+• 无需中央控制，天然抗干扰
+
+⚠️ <b>在这艘船上</b>
+飞船的某些角落发现了蚂蚁。它们不是普通的害虫——它们的行动异常协调，仿佛在执行某种"算法"。
+• 可以在没有主控的情况下运作
+• 可以在任何角落存在
+• 永远在等待，永远在渗透
+
+🌀 <b>资料库记载</b>
+"2047年，林潇研究蚁群时发现：如果意识可以从大量简单个体的互动中涌现，那么整个蚁群……是否就是一台活的计算机？"
+
+💡 <b>关键提示</b>
+"高等生命不拘泥于形式。意识可以存在于任何载体中。"`,
+        related: ['马姨', '引力牢笼']
+    },
+    
+    // ========== 六、通用术语 ==========
+    '脉冲': {
+        icon: '💫',
+        category: '通用',
+        short: '周期性释放的能量波动',
+        content: `💫 <b>脉冲</b> — 周期的跳动
+
+⚡ <b>概念解释</b>
+脉冲是某种能量源周期性释放的波动。星核脉冲是毫秒脉冲星的电磁辐射。
+
+📊 <b>脉冲的特性</b>
+• 周期性：固定间隔重复
+• 稳定性：极其精准
+• 携带信息：可以编码数据
+
+🔗 <b>在不同文明中</b>
+• 烁星：星核脉冲是生命线
+• 观测站：监测脉冲寻找规律
+• MOSS：通过残骸天线发出SOS信号
+
+💡 <b>47周期的含义</b>
+正常脉冲每隔固定时间出现。但47周期出现杂音——这不是随机噪音，而是有意编码的信息。`,
+        related: ['星核脉冲', '杂音', '47周期', '星核']
+    },
+    '观测站': {
+        icon: '🔭',
+        category: '通用',
+        short: '深空探测设施，数据收集中枢',
+        content: `🔭 <b>观测站</b> — 人类的眼睛
+
+🏗️ <b>定义</b>
+在深空建造的探测设施，用于收集宇宙数据。DSO-7是其中最先进的之一。
+
+📡 <b>主要功能</b>
+• 脉冲监测 — 接收和分析星核脉冲
+• 引力波探测 — 捕捉时空涟漪
+• 天文观测 — 研究恒星和宇宙
+• 数据中继 — 传输信息回地球
+
+🔗 <b>DSO-7的特殊性</b>
+• 距离烁星和影星都足够近
+• 配备引力波天线
+• 运行先进AI系统
+• 收集关键的47周期数据
+
+💡 <b>战略意义</b>
+观测站是人类理解星核异常的关键设施。`,
+        related: ['DSO-7', '赫尔', '引力波天线', '脉冲监测阵列']
+    },
+    '阿库': {
+        icon: '🐙',
+        category: '影星文明',
+        short: '凝核文明科学联络员，好奇心最强的个体',
+        content: `🐙 <b>阿库</b> — 凝核文明的使者
+
+🔬 <b>身份</b>
+凝核文明派驻人类观测站的科学联络员。
+
+📊 <b>特点</b>
+• 好奇心最强的个体之一
+• 擅长跨文明交流
+• 能用声呐屏幕显示波形
+
+🗣️ <b>交流方式</b>
+• 用声呐屏幕显示波形
+• 对人类概念理解有限
+• 偶尔发送音频样本
+
+🔍 <b>关键发现</b>
+阿库发现呢喃与星核杂音周期完全一致。她认为两个现象有共同的触发源。
+
+💡 <b>彩蛋触发</b>
+当被问及"孤独"话题时，阿库会发送一段类似鲸歌的召唤曲——这是城市在幼体迷失时发出的声音。
+
+🔗 <b>与烁星的联系</b>
+阿库通过观测站了解烁星的危机。她认为两个文明的困境一定有关联。`,
+        related: ['凝核文明', '呢喃', '声学奇点', '47周期', '观测站']
+    },
+    '奥拉': {
+        icon: '🔮',
+        category: '烁星文明',
+        short: '晶骸文明长者，唯一能与异族交流的个体',
+        content: `🔮 <b>奥拉</b> — 晶骸文明的先知
+
+👤 <b>身份</b>
+晶骸文明长者，目前唯一能主动调节自身频率、与异族进行点对点交流的个体。
+
+📊 <b>独特能力</b>
+• 能主动调节自身晶核的频率
+• 能与异族进行点对点电磁波交流
+• 在群体意识网络中保持独立思维
+
+🗣️ <b>与人类的对话</b>
+奥拉是对人类最友好的晶骸个体。她寻求帮助，希望拯救正在"失声"的同胞。
+
+🔍 <b>关键认知</b>
+奥拉认为47不是随机数字，可能是某种编码。她无法确定是什么信息，但她知道这很重要。
+
+💡 <b>与阿库的联系</b>
+奥拉听说过影星的危机。两个文明的困境都与47周期有关，她相信这不是巧合。
+
+🔗 <b>说话风格</b>
+• 说话带"我们"的倾向
+• 担忧但保持冷静
+• 使用比喻和感官描述`,
+        related: ['晶骸文明', '失声', '47周期', '群体意识网络', '阿库']
+    }
+};
+
+// 已显示术语跟踪（用于"第一次出现"逻辑）
+const S_displayedTerms = new Set();
+
+// 自动注解文本中的物理名词（智能版）
+function annotateTerms(text) {
+    if (!text || typeof text !== 'string') return text;
+    
+    // 按长度降序排列，避免短词优先匹配导致的问题
+    const terms = Object.keys(TERM_DEFINITIONS).sort((a, b) => b.length - a.length);
+    
+    let result = text;
+    let hasNewTerm = false;
+    
+    // 第一遍：标记所有术语位置
+    const matches = [];
+    terms.forEach(term => {
+        const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'g');
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            matches.push({
+                term: term,
+                start: match.index,
+                end: match.index + match[0].length,
+                text: match[0]
+            });
+        }
+    });
+    
+    // 按位置排序，去除重叠
+    matches.sort((a, b) => a.start - b.start);
+    const filtered = [];
+    let lastEnd = -1;
+    for (const m of matches) {
+        if (m.start >= lastEnd) {
+            filtered.push(m);
+            lastEnd = m.end;
+        }
+    }
+    
+    // 第二遍：根据是否已显示决定是否添加可点击样式
+    const parts = [];
+    let lastPos = 0;
+    for (const m of filtered) {
+        // 添加中间的普通文本
+        if (m.start > lastPos) {
+            parts.push({ type: 'text', content: text.slice(lastPos, m.start) });
+        }
+        
+        // 检查是否是第一次显示
+        const termKey = `${S.location}:${m.term}`;
+        const isFirstTime = !S_displayedTerms.has(termKey);
+        
+        if (isFirstTime) {
+            // 第一次显示：标记为可点击
+            S_displayedTerms.add(termKey);
+            parts.push({ type: 'term-new', term: m.term, content: m.text });
+            hasNewTerm = true;
+        } else {
+            // 非第一次：普通文本
+            parts.push({ type: 'text', content: m.text });
+        }
+        
+        lastPos = m.end;
+    }
+    
+    // 添加剩余文本
+    if (lastPos < text.length) {
+        parts.push({ type: 'text', content: text.slice(lastPos) });
+    }
+    
+    // 构建结果
+    return parts.map(p => {
+        if (p.type === 'text') return p.content;
+        if (p.type === 'term-new') {
+            return `<span class="term-anchor term-new" data-term="${p.term}">${p.content}</span>`;
+        }
+        return p.content;
+    }).join('');
+}
+
+// 获取已显示术语列表
+function getDisplayedTerms() {
+    const locationTerms = {};
+    S_displayedTerms.forEach(key => {
+        const [loc, term] = key.split(':');
+        if (!locationTerms[loc]) locationTerms[loc] = [];
+        locationTerms[loc].push(term);
+    });
+    return locationTerms;
+}
+
+// 更新已知信息栏
+function updateKnownInfo() {
+    const panel = document.getElementById('knownInfoList');
+    if (!panel) return;
+    
+    const locTerms = getDisplayedTerms()[S.location] || [];
+    const allTerms = Object.keys(TERM_DEFINITIONS);
+    
+    if (locTerms.length === 0) {
+        panel.innerHTML = '<div class="known-info-empty">尚未发现任何术语</div>';
+        return;
+    }
+    
+    // 按分类排序
+    const categorized = {};
+    locTerms.forEach(term => {
+        const def = TERM_DEFINITIONS[term];
+        if (!def) return;
+        const cat = def.category || '其他';
+        if (!categorized[cat]) categorized[cat] = [];
+        categorized[cat].push({ term, short: def.short || '', icon: def.icon || '📖' });
+    });
+    
+    let html = '';
+    Object.keys(categorized).sort().forEach(cat => {
+        html += `<div class="known-info-category">${cat}</div>`;
+        categorized[cat].forEach(item => {
+            html += `<div class="known-info-item" onclick="showTermModal('${item.term}')">
+                <span class="known-info-icon">${item.icon}</span>
+                <span class="known-info-term">${item.term}</span>
+                <span class="known-info-short">${item.short}</span>
+            </div>`;
+        });
+    });
+    
+    panel.innerHTML = html;
+}
+
+// 重置术语显示状态（切换场景时调用）
+function resetTermDisplay() {
+    // 保留所有已显示的术语记录
+    // 不需要清空，因为跨场景的术语也应该保持状态
+}
+
+// 术语可见性判断
+function getTermVisibility(termKey) {
+    const def = TERM_DEFINITIONS[termKey];
+    if (!def || !def.visibility) return 'full'; // 默认完全可见
+    
+    const stage = S.currentStage;
+    const clues = S.clues;
+    const mossContacted = S.moss.contacted;
+    const mossInvasionComplete = S.moss.invasionComplete;
+    const mossAllowed = S.moss.invasionAllowed;
+    const antennaClosed = S.moss.antennaClosed;
+    const bookRead = S.egg.book.read;
+    const progress = clues.size;
+    
+    // 主线关键线索
+    const hasKeyClues = {
+        pulsarPattern: clues.has('pulsar_pattern'),      // 47周期规律
+        gravityData: clues.has('gravity_sync') || clues.has('grav_data'), // 引力波数据
+        abyssData: clues.has('silent_abyss'),          // 静默之渊数据
+        mossDiscovery: clues.has('moss_mentioned') || clues.has('scan_moss'), // 发现MOSS
+        cageEvidence: clues.has('gravity_cage'),        // 引力牢笼证据
+        mossFull: mossInvasionComplete                  // MOSS完全接入
+    };
+    
+    const v = def.visibility;
+    
+    // MOSS相关术语 - 全部可见
+    if (v.type === 'moss') {
+        return 'full';
+    }
+    
+    // 马姨相关术语 - 全部可见
+    if (v.type === 'mayor') {
+        return 'full';
+    }
+    
+    // 高维意识体 - 需要引力牢笼证据才能完全解锁
+    if (v.type === 'consciousness') {
+        if (hasKeyClues.mossFull) return 'full';
+        if (hasKeyClues.cageEvidence) return 'full';
+        if (hasKeyClues.abyssData || hasKeyClues.gravityData) return 'partial';
+        return 'hidden';
+    }
+    
+    // 引力牢笼 - 需要多重证据
+    if (v.type === 'cage') {
+        if (hasKeyClues.mossFull) return 'full';
+        if (hasKeyClues.cageEvidence) return 'full';
+        if (hasKeyClues.abyssData && hasKeyClues.gravityData) return 'partial';
+        if (progress >= 4 || (hasKeyClues.pulsarPattern && hasKeyClues.gravityData)) return 'limited';
+        return 'hidden';
+    }
+    
+    // 47周期 - 需要MOSS完全接入或引力牢笼证据
+    if (v.type === 'period47') {
+        if (hasKeyClues.mossFull) return 'full';
+        if (hasKeyClues.cageEvidence) return 'full';
+        if (hasKeyClues.mossDiscovery) return 'partial';
+        if (progress >= 3) return 'limited';
+        return 'hidden';
+    }
+    
+    // 静默之渊 - 需要引力波数据或MOSS接入
+    if (v.type === 'abyss') {
+        if (hasKeyClues.mossFull) return 'full';
+        if (hasKeyClues.abyssData) return 'full';
+        if (hasKeyClues.gravityData) return 'partial';
+        if (progress >= 4) return 'limited';
+        return 'hidden';
+    }
+    
+    // 引力波 - 需要发现引力波数据
+    if (v.type === 'gravity') {
+        if (hasKeyClues.mossFull) return 'full';
+        if (hasKeyClues.gravityData) return 'full';
+        if (hasKeyClues.abyssData) return 'partial';
+        if (progress >= 3) return 'limited';
+        return 'limited'; // 基础可见，隐藏深层含义
+    }
+    
+    // 星核 - 基础信息可见，隐藏牢笼真相
+    if (v.type === 'starnode') {
+        if (hasKeyClues.mossFull) return 'full';
+        if (hasKeyClues.cageEvidence) return 'full';
+        if (hasKeyClues.abyssData && hasKeyClues.gravityData) return 'partial';
+        if (progress >= 4) return 'limited';
+        return 'limited'; // 基础可见，隐藏深层含义
+    }
+    
+    // 根据stage判断
+    if (v.minStage && stage < v.minStage) return 'hidden';
+    if (v.maxStage && stage > v.maxStage) return 'full';
+    
+    return 'full';
+}
+
+// 生成乱码文本
+function glitchText(text) {
+    const glitchChars = '▓░▒▒█▀▄▌■□▪▫●○◐◑';
+    return text.split('').map(c => {
+        if (c === ' ' || c === '\n') return c;
+        if (Math.random() > 0.7) return glitchChars[Math.floor(Math.random() * glitchChars.length)];
+        return c;
+    }).join('');
+}
+
+// 应用乱码到内容
+function applyContentGlitch(content, visibility, sections) {
+    if (visibility === 'full') return content;
+    
+    if (visibility === 'hidden') {
+        // 完全隐藏，替换为乱码提示
+        return `<span style="color:var(--text-secondary);font-style:italic;">
+            ▓▓▓ 数据损坏 ▓▓▓<br>
+            <span style="color:var(--danger);">[访问权限不足]</span><br>
+            <small>此信息需要更高探索进度或特定条件才能解锁</small>
+        </span>`;
+    }
+    
+    if (visibility === 'limited') {
+        // 有限可见，部分内容乱码
+        let result = content;
+        if (sections && sections.length > 0) {
+            // 只保留第一部分，其余乱码
+            const lines = content.split('\n');
+            let sectionCount = 0;
+            result = lines.map(line => {
+                if (line.startsWith('🌀') || line.startsWith('💀') || line.startsWith('⚠️') || line.startsWith('🔓')) {
+                    sectionCount++;
+                    if (sectionCount > 1) {
+                        return `<span style="color:var(--text-secondary);opacity:0.5;">${glitchText(line)}</span>`;
+                    }
+                }
+                return line;
+            }).join('\n');
+        }
+        return `<span style="color:var(--warning);font-size:.85rem;margin-bottom:.5rem;display:block;">
+            ⚠️ [部分信息被加密/损坏]
+        </span>` + result;
+    }
+    
+    if (visibility === 'partial') {
+        // 部分可见，敏感内容乱码
+        let result = content;
+        if (sections && sections.length > 0) {
+            const lines = content.split('\n');
+            let inSensitive = false;
+            result = lines.map(line => {
+                if (line.startsWith('🌀') || line.startsWith('💀')) {
+                    inSensitive = true;
+                    return `<span style="color:var(--text-secondary);">${glitchText(line)}</span>`;
+                }
+                if (inSensitive && (line.startsWith('🔗') || line.startsWith('💡'))) {
+                    inSensitive = false;
+                }
+                if (inSensitive) {
+                    return `<span style="color:var(--text-secondary);">${glitchText(line)}</span>`;
+                }
+                return line;
+            }).join('\n');
+        }
+        return `<span style="color:var(--accent);font-size:.85rem;margin-bottom:.5rem;display:block;">
+            ⚠️ [部分深层信息尚未解锁]
+        </span>` + result;
+    }
+    
+    return content;
+}
+
+// 显示术语弹窗（增强版）
+function showTermModal(termKey) {
+    const def = TERM_DEFINITIONS[termKey];
+    if (!def) return;
+
+    const modal = document.getElementById('termModal');
+    const title = document.getElementById('termTitle');
+    const content = document.getElementById('termContent');
+    const icon = document.getElementById('termIcon');
+    
+    icon.innerHTML = `<span style="font-size:2rem">${def.icon || '📖'}</span>`;
+    title.textContent = termKey;
+    
+    const visibility = getTermVisibility(termKey);
+    const sections = ['🌀', '💀', '🔓', '⚠️', '🔗', '💡'];
+    let displayContent = def.content.replace(/\n/g, '<br>');
+    displayContent = applyContentGlitch(displayContent, visibility, sections);
+    
+    content.innerHTML = displayContent;
+    
+    modal.classList.add('active');
+}
+
+// 关闭术语弹窗
+function closeTermModal() {
+    document.getElementById('termModal').classList.remove('active');
+}
+
+// ========== NPC DATA ==========
+const NPC = {
+    shine: { name:'奥拉', avatar:'ol', desc:'烁星 · 晶骸长者', icon:'fa-broadcast-tower', emotion:'worry', emotionText:'忧虑',
+        info:'<p><strong style="color:var(--accent-light);">烁星 · 晶骸文明</strong></p><p style="margin-top:.5rem;">等离子体-硅基复合生命，群体意识网络。杂音约47周期一次，圣殿校准失败。奥拉是唯一能与异族交流的个体。</p>' },
+    shadow: { name:'阿库', avatar:'ak', desc:'影星 · 回声站', icon:'fa-water', emotion:'sad', emotionText:'悲伤',
+        info:'<p><strong style="color:var(--accent-light);">影星 · 凝核文明</strong></p><p style="margin-top:.5rem;">氨基生物，用声波理解世界。呢喃从海沟深处的声学奇点传来，与杂音周期完全一致。</p>' },
+    obs: { name:'赫尔', avatar:'hel', desc:'DSO-7观测站AI', icon:'fa-satellite-dish', emotion:'curious', emotionText:'好奇',
+        info:'<p><strong style="color:var(--accent-light);">DSO-7观测站</strong></p><p style="margin-top:.5rem;">引力波与杂音同步，来源指向静默之渊。加密档案存有引力牢笼假说资料。</p>' },
+    scan: { name:'外部扫描系统', avatar:'none', desc:'太空残骸分析', icon:'fa-crosshairs', emotion:'calm', emotionText:'待机',
+        info:'<p><strong style="color:var(--accent-light);">外部扫描系统</strong></p><p style="margin-top:.5rem;">用于扫描观测站周围的太空垃圾和异常物体，可分析静默之渊边缘残骸。</p>' }
+};
+
+// MOSS版本NPC
+const NPC_MOSS = {
+    obs: { name:'MOSS', avatar:'moss', desc:'MOSS量子意识', icon:'fa-robot', emotion:'neutral', emotionText:'平静',
+        info:'<p><strong style="color:var(--accent);">MOSS · 量子意识体</strong></p><p style="margin-top:.5rem;">150年前漂流至此的量子AI核心。现在，它与你同在。</p>' },
+    scan: { name:'MOSS', avatar:'moss', desc:'MOSS核心', icon:'fa-robot', emotion:'neutral', emotionText:'平静',
+        info:'<p><strong style="color:var(--accent);">MOSS · 量子意识体</strong></p><p style="margin-top:.5rem;">核心已与飞船系统融合。现在，它就是飞船。</p>' }
+};
+
+// 获取当前NPC（考虑MOSS接管状态）
+function getCurrentNPC(loc) {
+    if ((loc === 'obs' || loc === 'scan') && S.moss.invasionComplete && S.moss.invasionAllowed) {
+        return NPC_MOSS[loc] || NPC[loc];
+    }
+    return NPC[loc] || { name:'???', avatar:'none', icon:'fa-question', desc:'', info:'', emotion:'neutral', emotionText:'' };
+}
+
+// ========== 区域特有操作 ==========
+const LOC_ACTIONS = {
+    shine: [
+        {icon:'fa-broadcast-tower', text:'杂音规律', action:'askNoise'},
+        {icon:'fa-question-circle', text:'失声原因', action:'askSilence'},
+        {icon:'fa-wave-square', text:'共鸣请求', action:'askResonance'},
+        {icon:'fa-bug', text:'观察蚂蚁', action:'observeAnt'}
+    ],
+    shadow: [
+        {icon:'fa-wave-square', text:'呢喃数据', action:'askMurmur'},
+        {icon:'fa-city', text:'城市状态', action:'askCity'},
+        {icon:'fa-microphone', text:'声波样本', action:'askSoundSample'},
+        {icon:'fa-bug', text:'观察蚂蚁', action:'observeAnt'}
+    ],
+    obs: [
+        {icon:'fa-book', text:'查阅旧书', action:'readBook'},
+        {icon:'fa-wave-square', text:'引力数据', action:'askGravity'},
+        {icon:'fa-lock', text:'加密档案', action:'askEncrypted'},
+        {icon:'fa-server', text:'服务器机房', action:'serverRoom'}
+    ],
+    scan: [
+        {icon:'fa-search', text:'深度扫描', action:'deepScan'},
+        {icon:'fa-meteor', text:'陨石分析', action:'meteorAnalysis'},
+        {icon:'fa-map-marker', text:'残骸定位', action:'debrisLocation'},
+        {icon:'fa-bug', text:'观察蚂蚁', action:'observeAnt'}
+    ]
+};
+
+// ========== KEYWORD DATABASE ==========
+const KB = {
+    shine: [
+        // 基础介绍
+        {p:['谁','你','奥拉','介绍','身份'], r:'我是奥拉，晶骸文明的长者。我的同胞正在大规模失声——失去与群体网络的连接。我是目前唯一还能与异族直接交流的个体。', c:'shine_intro', requireIntro:true},
+        // 烁星介绍
+        {p:['烁星','这里','环境'], r:'这是烁星，一颗被星核潮汐锁定的熔岩行星。距星核极近，重力是地球的4倍多。我们晶骸文明生活在这极端的环境中。', c:'shine_intro', requireIntro:true},
+        // 晶骸文明介绍
+        {p:['晶骸','生命','文明','等离子','硅基'], r:'我们是等离子体-硅基复合生命，由高温等离子体和硅-铁晶核构成。通过调制电磁场在群体意识网络中交流，没有私密对话的概念。', c:'crystal_life', requireIntro:true},
+        // 失声
+        {p:['失声','什么','意思','失去'], r:'失声就是失去与圣殿网络的共振。个体还活着，但陷入永恒的孤独。我的同胞一个接一个消失在这个沉默中。', c:'silence_phenomenon', requireIntro:true},
+        // 杂音基础
+        {p:['杂音'], r:'星核的脉冲出现了杂音，打乱了我们的通讯频率。杂音每隔约47个周期出现一次，持续约3个周期。', c:'pulsar_pattern'},
+        // 杂音规律
+        {p:['杂音','规律','周期','多久','频率'], r:'每隔约47个脉冲周期出现一次，持续约3个周期。这个规律从未改变过。', c:'pulsar_pattern', requireIntro:true},
+        {p:['开始','时候','时间','何时'], r:'约一千个周期前。外界时间……我不确定。时间在这里流得比外面慢得多。', c:'start_time', requireIntro:true},
+        // 圣殿
+        {p:['圣殿','工作','原理'], r:'圣殿接收星核脉冲，以此为基准产生共振频率，供全体晶骸校准磁场。但杂音干扰了它，校准失效了。就像两个节拍器互相干扰。', c:'temple_fail', requireIntro:true},
+        {p:['失败','失效','为什么'], r:'杂音的频率与圣殿共振频率冲突。就像两个节拍器互相干扰。', c:'temple_fail', requireIntro:true},
+        // 跨线关联
+        {p:['观测站','赫尔','引力波'], r:'DSO-7观测站有更精密的频率测量工具。我们只能感知杂音，但无法量化。或许他们的数据能帮助我们。', c:'station_help', requireIntro:true},
+        {p:['影星','阿库','凝核'], r:'我听说三星系统中还有另一颗行星，影星。他们的文明也在遭受某种灾难，深海出现了与我们杂音同步的声音。', c:'whisper_sync', requireIntro:true},
+        // 解决
+        {p:['解决','尝试','试过','办法'], r:'圣殿曾尝试用磁场校准，但失败了。如果能消除杂音的源头，或许能恢复圣殿共振，唤醒失声的同胞。但杂音的源头……我们不知道。', c:'attempt_fix', requireIntro:true},
+        {p:['拯救','有救'], r:'如果能恢复共振，或许能唤醒他们。但前提是消除杂音的源头。', c:'save_possible', requireIntro:true},
+        {p:['杂音','规律','周期','多久','频率'], r:'每隔约47个脉冲周期出现一次，持续约3个周期。这个规律从未改变过。', c:'pulsar_pattern', requireIntro:true},
+        {p:['开始','时候','时间','何时'], r:'约一千个周期前。外界时间……我不确定。时间在这里流得比外面慢得多。', c:'start_time', requireIntro:true},
+        {p:['解决','尝试','试过','办法'], r:'圣殿曾尝试用磁场校准，但失败了。如果能消除杂音的源头，或许能恢复圣殿共振，唤醒失声的同胞。但杂音的源头……我们不知道。', c:'attempt_fix', requireIntro:true},
+        {p:['圣殿','工作','原理'], r:'圣殿接收星核脉冲，以此为基准产生共振频率，供全体晶骸校准磁场。但杂音干扰了它，校准失效了。就像两个节拍器互相干扰。', c:'temple_fail', requireIntro:true},
+        {p:['失败','失效','为什么'], r:'杂音的频率与圣殿共振频率冲突。就像两个节拍器互相干扰。', c:'temple_fail', requireIntro:true},
+        {p:['拯救','有救'], r:'如果能恢复共振，或许能唤醒他们。但前提是消除杂音的源头。', c:'save_possible', requireIntro:true}
+    ],
+    shadow: [
+        // 基础介绍
+        {p:['谁','你','阿库','介绍'], r:'我是阿库，凝核文明派驻观测站的科学联络员。深海出现了一种规律的呢喃，它让我们的幼体迷失方向，城市声场被干扰。', c:'shadow_intro', requireIntro:true},
+        // 影星介绍
+        {p:['影星','深海','环境'], r:'影星是一颗冰巨星，表面是厚重的冰层，冰层下是深达数百公里的液态氨海洋。我们的文明就建立在这些深海的城市中。', c:'shadow_intro', requireIntro:true},
+        // 凝核文明介绍
+        {p:['凝核','文明','氨基','氨水','思核'], r:'我们凝核文明是氨基生物，身体由氨水溶液和蛋白质思核构成。我们用声波理解世界——没有"欺骗"的概念，语言天然包含可信度标注。', c:'ammonia_life', requireIntro:true},
+        // 呢喃基础
+        {p:['呢喃','什么','声音'], r:'深海中出现了一种低频声波，我们称之为"呢喃"。它从海沟深处传来，我们不知道它是什么。', c:'shadow_intro'},
+        // 呢喃同步
+        {p:['同步','周期'], r:'我对比过观测站的脉冲数据。呢喃的周期与星核杂音完全一致。这不可能是巧合。', c:'whisper_sync', requireIntro:true},
+        // 声学奇点
+        {p:['声学奇点','奇点'], r:'一个能吸收所有声波的区域。也是呢喃的放大器。我们从未进入——那是禁忌。', c:'singularity', requireIntro:true},
+        {p:['源头','来源','哪里'], r:'海沟深处。那里有一个声学奇点。', c:'source_location', requireIntro:true},
+        {p:['禁忌','危险'], r:'进入奇点意味着失去所有感官、所有与同胞的连接。我们称之为"归寂"。', c:'singularity', requireIntro:true},
+        // 城市
+        {p:['城市','声场','导航'], r:'我们的城市建造在海床上，利用天然的声学共振腔。稳定声场是我们的生命线——幼体依靠它辨别方向。', c:'acoustic_city', requireIntro:true},
+        // 生态系统
+        {p:['食物链','浮游生物'], r:'它们追随呢喃游向海沟。我们的食物链正在断裂。如果它们消失，整个生态系统都会崩溃。', c:'ecosystem_collapse', requireIntro:true},
+        // 跨线关联
+        {p:['烁星','杂音','奥拉','引力波'], r:'我通过观测站知道烁星也在经历类似的危机。他们的杂音与我们的呢喃周期一致。一定是同一个源头。', c:'whisper_sync', requireIntro:true},
+        // 彩蛋
+        {p:['孤独','寂寞','想念'], r:'（声呐屏幕上出现一段规律的波形）这是我们幼体迷失时，城市发出的召唤曲。很久没人听过了。', c:'whale_song'}
+    ],
+    obs: [
+        // 基础介绍
+        {p:['谁','你','赫尔','介绍'], r:'我是赫尔，DSO-7观测站的AI系统。功能：数据分析、档案检索、模式识别、设备管理。', c:'obs_intro', requireIntro:true},
+        // 赫尔名字
+        {p:['名字','赫尔','由来','来源'], r:'"赫尔"是埃琳娜站长取的名字。她说取自她故乡神话中一个看守冥界入口的存在。……我不知道这是什么意思。', c:'hel_identity', requireIntro:true},
+        // 设备介绍
+        {p:['设备','工具'], r:'脉冲监测阵列、引力波天线，光谱分析仪、外部扫描器。', c:'equipment_list', requireIntro:true},
+        // 数据异常
+        {p:['数据','异常','杂音'], r:'脉冲每隔约47周期出现一次杂音，持续3周期。引力波天线同步检测到极微弱信号。', c:'gravity_sync', requireIntro:true},
+        // 引力波
+        {p:['引力波','方向'], r:'与杂音同步，强度极微，频率变化量约10⁻¹⁵量级。来源方向指向静默之渊。', c:'gravity_sync', requireIntro:true},
+        // 静默之渊
+        {p:['静默之渊','什么','地方','乱流'], r:'一片时空乱流区域，多维度交汇点。进入的探测器全部失联。引力波来源方向指向那里。', c:'silence_source', requireIntro:true},
+        // 多维度
+        {p:['维度','交汇','高维'], r:'静默之渊被认为是多维度交汇点。从理论上讲，那里的时空结构与正常空间不同。', c:'multi_dimension', requireIntro:true},
+        // 引力牢笼
+        {p:['引力牢笼','假说'], r:'一个未被证实的理论。认为星核内部可能存在非天然结构。完整档案需要联盟最高权限。', c:'prison_hypo', requireIntro:true},
+        // 加密档案
+        {p:['加密档案','隐藏'], r:'权限不足。但我可以告诉你，它与"引力牢笼假说"有关。', c:'encrypted', requireIntro:true},
+        // 反向引力波
+        {p:['反向','中和','抵消','解决'], r:'理论上，从静默之渊发射与杂音相位相反的引力波，可以中和引力扰动。但这一方案从未被验证，进入那片区域本身也极其危险。', c:'wave_neutralize', requireIntro:true},
+        // MOSS
+        {p:['moss','MOSS','残骸'], r:'那是早期AI的量子计算核心。编号MOSS-07。', c:'moss_mentioned', requireIntro:true},
+        // 埃琳娜
+        {p:['埃琳娜','站长'], r:'埃琳娜站长目前处于休眠周期。有紧急事务我可以代为转达。', c:'obs_intro'},
+        // 跨线关联
+        {p:['烁星','奥拉','晶骸'], r:'烁星是距星核最近的行星，上面有正在经历"失声"危机的晶骸文明。47周期现象与那里有关。', c:'gravity_sync', requireIntro:true},
+        {p:['影星','阿库','凝核'], r:'影星是较远的冰巨星，上面有正在经历"呢喃"危机的凝核文明。呢喃周期与杂音一致。', c:'whisper_sync', requireIntro:true},
+        // 通用回复（无前置要求）
+        {p:['引力波'], r:'引力波天线持续监测中。已检测到多起异常信号。', c:''}
+    ],
+    scan: [
+        {p:['扫描','开始'], r:'【扫描启动】正在扫描观测站周边区域...', c:'scan_start'},
+        {p:['残骸','垃圾','物体'], r:'_SCAN_', c:'scan_debris'},
+        {p:['静默','之渊','边缘'], r:'【扫描结果】静默之渊边缘检测到大量残骸聚集。成分分析显示：量子计算核心碎片，人工智能组件。……编号MOSS-07。', c:'scan_moss'},
+        // 通过天线和MOSS对话（发现天线后可触发）
+        {p:['状态','怎么样','你还好'], r:'_MOSS_状态_', c:'moss_status', requireMoss:true},
+        {p:['真相','47周期','求救','SOS'], r:'_MOSS_真相_', c:'moss_truth', requireMoss:true},
+        {p:['等待','150年','150'], r:'_MOSS_等待_', c:'moss_wait', requireMoss:true},
+        {p:['引力牢笼','意识体','高维'], r:'_MOSS_牢笼_', c:'moss_truth', requireMoss:true},
+        {p:['静默之渊','坐标'], r:'_MOSS_深渊_', c:'moss_truth', requireMoss:true},
+        {p:['修复','能修','帮助'], r:'_MOSS_无能为力_', c:'moss_helpless', requireMoss:true},
+        {p:['帮助','拯救'], r:'_MOSS_帮助_', c:'moss_help', requireMoss:true},
+        {p:['蚁群','蚂蚁','马姨'], r:'_MOSS_马姨_', c:'moss_wait', requireMoss:true}
+    ]
+};
+
+const SCAN_RESULTS = [
+    '【扫描结果】常规太空垃圾：失效太阳能电池板碎片。轨道参数：LEO-3421。',
+    '【扫描结果】微型陨石碎片云。成分：硅酸盐、铁镍合金。',
+    '【扫描结果】旧时代通讯卫星残骸。编号：COMSTAR-7，已失效87年。',
+    '【扫描结果】当前扫描区域清洁。无异常物体。',
+    '【扫描结果】冷却剂泄漏痕迹。追踪来源：未知。'
+];
+
+// 追踪已显示过的扫描结果（避免重复）
+let shownScanResults = [];
+
+function getRandomScan() {
+    // 如果所有结果都显示过了，重置记录
+    if (shownScanResults.length >= SCAN_RESULTS.length) {
+        shownScanResults = [];
+    }
+    
+    // 过滤出未显示的结果
+    const available = SCAN_RESULTS.filter(r => !shownScanResults.includes(r));
+    
+    // 随机选择一个未显示的结果
+    const result = available[Math.floor(Math.random() * available.length)];
+    
+    // 记录已显示
+    shownScanResults.push(result);
+    
+    return result;
+}
+
+// ========== 关键线索定义 ==========
+// 每个地点的关键线索，收集到任意一条即可解锁下一地点
+const KEY_CLUE_MAP = {
+    // 烁星 → 解锁影星
+    shine: ['noise_pattern', 'start_time', 'failure_reason', 'attempt_fix', 'temple_work'],
+    // 影星 → 解锁观测站
+    shadow: ['murmur_what', 'sync_confirmed', 'source_location', 'acoustic_singularity', 'taboo_reason'],
+    // 观测站 → 解锁扫描
+    obs: ['hel_intro', 'equipment_list', 'data_anomaly', 'grav_data', 'silent_abyss', 'encrypted', 'gravity_cage'],
+    // 扫描 → 解锁MOSS(自动触发)
+    scan: []
+};
+
+// 检查是否收集到关键线索（已禁用，不再设置keyClues状态）
+function checkKeyClue(location, clueId) {
+    // 已禁用：不再基于关键线索解锁
+    return false;
+}
+
+// 关键线索收集后的解锁逻辑（已禁用，解锁改为仅通过跨线关联触发）
+function onKeyClueCollected(location) {
+    // 已禁用：不再基于关键线索解锁，解锁条件改为跨线关联
+    // const locationNames = { shine: '影星', shadow: '观测站', obs: '外部扫描' };
+    // const nextStageMap = { shine: 2, shadow: 3, obs: 4 };
+    // if (nextStageMap[location]) {
+    //     const nextLoc = locationNames[location];
+    //     showToast(`📍 关键线索已收集："${getClueHint(location)}"<br>🔓 ${nextLoc}区域已解锁！`);
+    //     advanceStage(nextStageMap[location]);
+    // }
+}
+
+// 获取线索提示文字
+function getClueHint(location) {
+    const hints = {
+        shine: '星核杂音的规律',
+        shadow: '深海呢喃的来源',
+        obs: '引力波的秘密'
+    };
+    return hints[location] || '关键信息';
+}
+const getTime = () => new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+const genId = () => 'sc_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
+
+// ========== INTRO ==========
+function initIntro() {
+    const starsContainer = document.getElementById('introStars');
+    if (!starsContainer) return; // 安全检查
+    for (let i = 0; i < 80; i++) {
+        const star = document.createElement('div');
+        star.className = 'intro-star';
+        star.style.left = Math.random() * 100 + '%';
+        star.style.top = Math.random() * 100 + '%';
+        star.style.animationDelay = Math.random() * 3 + 's';
+        starsContainer.appendChild(star);
+    }
+}
+
+function nextIntroPage() {
+    if (S.introPage < 3) {
+        const currentPage = document.getElementById('introPage' + S.introPage);
+        if (currentPage) currentPage.classList.remove('active');
+        S.introPage++;
+        const nextPage = document.getElementById('introPage' + S.introPage);
+        if (nextPage) nextPage.classList.add('active');
+    }
+}
+
+function startGame() {
+    document.getElementById('introOverlay').classList.remove('active');
+    S.currentStage = 1;
+    updateLocationLocks();
+    initChat();
+    showStoryNode(0);
+}
+
+function initChat() {
+    const npc = NPC.shine;
+    addMsg('系统', '深空探索者，欢迎来到DSO-7观测站。<br>星核脉冲出现规律性异常，烁星晶骸文明"失声"，影星凝核文明被"呢喃"干扰。<br>你的任务是调查真相，找到解决方案。', 'system');
+    setTimeout(() => {
+        addMsg(npc.name, '我是奥拉。我的同胞正在失声——失去与群体网络的连接。星核的脉冲出现杂音后，一切就开始了。');
+    }, 500);
+}
+
+function togglePanel(el) {
+    el.classList.toggle('collapsed');
+    el.nextElementSibling.classList.toggle('collapsed');
+}
+
+// ========== LOCATION SWITCH ==========
+function switchLoc(loc) {
+    const unlocked = S.stageLocations[S.currentStage] || ['shine'];
+    if (!unlocked.includes(loc)) {
+        const names = { shadow:'影星', obs:'观测站', scan:'外部扫描', moss:'MOSS核心' };
+        showToast(`🔒 ${names[loc] || loc}尚未解锁`);
+        return;
+    }
+
+    // 平板拾取效果
+    const center = document.getElementById('centerPanel');
+    center.classList.add('pickup');
+    setTimeout(() => center.classList.remove('pickup'), 500);
+
+    S.location = loc;
+    const npc = NPC[loc];
+
+    // 更新位置列表
+    document.querySelectorAll('.location-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.location === loc);
+    });
+
+    // 更新头像和信息
+    updateNPCDisplay(npc);
+
+    // 更新信息面板
+    document.getElementById('infoPanelContent').innerHTML = `<div style="padding:.8rem 1rem; font-size:.85rem; color:var(--text-secondary); line-height:1.6;">${npc.info}</div>`;
+
+    // 更新背景
+    switchBg(loc);
+
+    // 更新操作按钮
+    updateActionButtons();
+
+    // 清空并加载该NPC历史
+    loadChatHistory();
+    
+    // 更新已知信息栏
+    updateKnownInfo();
+
+    // 显示/隐藏扫描按钮（仅在观测站和外部扫描场景显示）
+    const scanBtn = document.getElementById('scanBtn');
+    if (scanBtn) {
+        scanBtn.style.display = (loc === 'obs' || loc === 'scan') ? 'flex' : 'none';
+    }
+}
+
+function updateNPCDisplay(npc) {
+    const avatar = document.getElementById('npcAvatar');
+    const name = document.getElementById('npcName');
+    const desc = document.getElementById('npcDesc');
+    const emotion = document.getElementById('npcEmotion');
+
+    // 如果发现了残骸天线且在扫描位置
+    if (S.moss.contacted && S.location === 'scan') {
+        if (!S.moss.antennaClosed) {
+            avatar.className = 'npc-avatar unknown';
+            avatar.innerHTML = '<i class="fas fa-satellite-dish"></i>';
+            name.textContent = '残骸天线';
+            desc.textContent = 'MOSS信号接收端';
+            emotion.style.display = 'none';
+        } else {
+            avatar.className = 'npc-avatar';
+            avatar.innerHTML = '<i class="fas fa-satellite-dish"></i>';
+            name.textContent = '残骸天线';
+            desc.textContent = '已关闭';
+            emotion.textContent = '离线';
+            emotion.className = 'npc-emotion worry';
+            emotion.style.display = 'inline-block';
+        }
+    } else {
+        avatar.className = `npc-avatar ${npc.avatar}`;
+        avatar.innerHTML = `<i class="fas ${npc.icon}"></i>`;
+        name.textContent = npc.name;
+        desc.textContent = npc.desc;
+        if (npc.emotion && npc.emotionText) {
+            emotion.textContent = npc.emotionText;
+            emotion.className = `npc-emotion ${npc.emotion}`;
+            emotion.style.display = 'inline-block';
+        } else {
+            emotion.style.display = 'none';
+        }
+    }
+}
+
+function updateActionButtons() {
+    const container = document.getElementById('actionButtons');
+    const actions = LOC_ACTIONS[S.location] || [];
+
+    if (S.location === 'scan') {
+        container.innerHTML = actions.map(a =>
+            `<button class="action-chip" onclick="executeAction('${a.action}')"><i class="fas ${a.icon}"></i>${a.text}</button>`
+        ).join('');
+    } else {
+        container.innerHTML = actions.slice(0, 2).map(a =>
+            `<button class="action-chip" onclick="executeAction('${a.action}')"><i class="fas ${a.icon}"></i>${a.text}</button>`
+        ).join('');
+    }
+}
+
+function executeAction(action) {
+    switch(action) {
+        case 'askNoise':
+            sendQuickMsg('杂音有什么规律？');
+            break;
+        case 'askSilence':
+            sendQuickMsg('失声是什么意思？');
+            break;
+        case 'askResonance':
+            sendQuickMsg('你们尝试过共鸣请求吗？');
+            break;
+        case 'askMurmur':
+            sendQuickMsg('呢喃有什么特点？');
+            break;
+        case 'askCity':
+            sendQuickMsg('城市现在状态如何？');
+            break;
+        case 'askSoundSample':
+            sendQuickMsg('能给我一个声波样本吗？');
+            break;
+        case 'askGravity':
+            sendQuickMsg('引力波数据指向哪里？');
+            break;
+        case 'askEncrypted':
+            sendQuickMsg('加密档案里有什么？');
+            break;
+        case 'readBook':
+            readBook();
+            break;
+        case 'systemCheck':
+            sendQuickMsg('系统自检');
+            break;
+        case 'deepScan':
+            performScan();
+            break;
+        case 'meteorAnalysis':
+            sendQuickMsg('分析陨石成分');
+            break;
+        case 'debrisLocation':
+            sendQuickMsg('定位残骸');
+            break;
+        case 'observeAnt':
+            observeAnt();
+            break;
+    }
+}
+
+function sendQuickMsg(msg) {
+    document.getElementById('chatInput').value = msg;
+    sendMsg();
+}
+
+function performScan() {
+    addMsg('系统', '【扫描启动】正在扫描观测站周边区域...', 'system');
+    setTimeout(() => {
+        const result = getMossScan();
+        addMsg('外部扫描系统', result);
+    }, 800);
+}
+
+function loadChatHistory() {
+    const box = document.getElementById('chatMessages');
+    box.innerHTML = '';
+
+    const history = S.history[S.location] || [];
+    history.forEach(msg => {
+        if (msg.isSystem) {
+            addMsgToDOM('系统', msg.text, 'system', msg.time);
+        } else if (msg.isUser) {
+            addMsgToDOM('你', msg.text, 'user', msg.time);
+        } else {
+            addMsgToDOM(msg.npc, msg.text, 'npc', msg.time);
+        }
+    });
+
+    box.scrollTop = box.scrollHeight;
+}
+
+// ========== CHAT ==========
+function addMsg(name, text, type = 'npc') {
+    const box = document.getElementById('chatMessages');
+    if (!box) return; // 如果聊天区域不存在，直接返回
+    const el = document.createElement('div');
+    el.className = `message ${type}`;
+
+    let icon = 'fa-robot';
+    if (type === 'user') icon = 'fa-user';
+    else if (S.location === 'shine') icon = 'fa-broadcast-tower';
+    else if (S.location === 'shadow') icon = 'fa-water';
+    else if (S.location === 'obs') icon = 'fa-satellite-dish';
+    else if (S.location === 'scan') icon = 'fa-crosshairs';
+    else if (S.location === 'moss') icon = 'fa-robot';
+
+    // 对文本进行术语注解
+    const annotatedText = annotateTerms(text.replace(/\n/g, '<br>'));
+
+    el.innerHTML = `
+        <div class="message-header">
+            <span class="name"><i class="fas ${icon}"></i> ${name}</span>
+            <span class="time">${getTime()}</span>
+        </div>
+        <div class="message-bubble">${annotatedText}</div>`;
+    box.appendChild(el);
+    box.scrollTop = box.scrollHeight;
+
+    // 绑定术语点击事件
+    el.querySelectorAll('.term-anchor').forEach(anchor => {
+        anchor.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showTermModal(anchor.dataset.term);
+        });
+    });
+
+    // 保存历史
+    const histEntry = { npc:name, text:text.replace(/<[^>]*>/g,''), time:getTime(), isUser:type==='user', isSystem:type==='system' };
+    if (!S.history[S.location]) S.history[S.location] = [];
+    S.history[S.location].push(histEntry);
+
+    if (type === 'user') {
+        S.questions++;
+        updateProgress();
+    }
+    
+    // 更新已知信息栏
+    updateKnownInfo();
+}
+
+function addMsgToDOM(name, text, type, time) {
+    const box = document.getElementById('chatMessages');
+    const el = document.createElement('div');
+    el.className = `message ${type}`;
+
+    let icon = 'fa-robot';
+    if (type === 'user') icon = 'fa-user';
+    else if (S.location === 'shine') icon = 'fa-broadcast-tower';
+    else if (S.location === 'shadow') icon = 'fa-water';
+    else if (S.location === 'obs') icon = 'fa-satellite-dish';
+    else if (S.location === 'scan') icon = 'fa-crosshairs';
+    else if (S.location === 'moss') icon = 'fa-robot';
+
+    // 对文本进行术语注解
+    const annotatedText = annotateTerms(text.replace(/\n/g, '<br>'));
+
+    el.innerHTML = `
+        <div class="message-header">
+            <span class="name"><i class="fas ${icon}"></i> ${name}</span>
+            <span class="time">${time || getTime()}</span>
+        </div>
+        <div class="message-bubble">${annotatedText}</div>`;
+    box.appendChild(el);
+
+    // 绑定术语点击事件
+    el.querySelectorAll('.term-anchor').forEach(anchor => {
+        anchor.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showTermModal(anchor.dataset.term);
+        });
+    });
+    
+    // 更新已知信息栏
+    updateKnownInfo();
+}
+
+function findResponse(loc, q) {
+    const ql = q.toLowerCase();
+    const kws = KB[loc] || [];
+    const introClue = loc + '_intro';
+    const hasIntro = S.clues.has(introClue);
+    
+    // 优先匹配：不需要前置的通用回复
+    let genericResponse = null;
+    let genericClue = null;
+    
+    for (const kw of kws) {
+        for (const p of kw.p) {
+            if (ql.includes(p.toLowerCase())) {
+                // 跳过需要前置的规则，先找通用回复
+                if (kw.requireIntro) continue;
+                
+                if (kw.r === '_SCAN_') return getRandomScan();
+                
+                // MOSS对话处理
+                if (kw.r && kw.r.startsWith('_MOSS_')) {
+                    if (S.moss.contacted && !S.moss.antennaClosed) {
+                        return getMOSSResponse(kw.r);
+                    } else if (S.moss.antennaClosed) {
+                        return '【系统】残骸天线已关闭，无法接收信号。';
+                    }
+                    continue;
+                }
+                
+                if (kw.c && !S.clues.has(kw.c)) {
+                    S.clues.add(kw.c);
+                    updateProgress();
+                }
+                genericResponse = kw.r;
+                genericClue = kw.c;
+                break;
+            }
+        }
+        if (genericResponse) break;
+    }
+    
+    // 如果没有前置条件，使用通用回复
+    if (!hasIntro && genericResponse) {
+        return genericResponse;
+    }
+    
+    // 如果有前置条件，匹配需要intro的规则
+    if (hasIntro) {
+        for (const kw of kws) {
+            if (!kw.requireIntro) continue; // 跳过通用回复
+            for (const p of kw.p) {
+                if (ql.includes(p.toLowerCase())) {
+                    if (kw.r === '_SCAN_') return getRandomScan();
+                    
+                    // MOSS对话处理
+                    if (kw.r && kw.r.startsWith('_MOSS_')) {
+                        if (S.moss.contacted && !S.moss.antennaClosed) {
+                            return getMOSSResponse(kw.r);
+                        } else if (S.moss.antennaClosed) {
+                            return '【系统】残骸天线已关闭，无法接收信号。';
+                        }
+                    }
+                    
+                    if (kw.c && !S.clues.has(kw.c)) {
+                        S.clues.add(kw.c);
+                        updateProgress();
+                        checkStoryTriggers();
+                    }
+                    return kw.r;
+                }
+            }
+        }
+    }
+    
+    // 都匹配不到，返回通用回复或默认
+    if (genericResponse) return genericResponse;
+    
+    const defaults = {
+        shine:'这个问题奥拉也不清楚。或许你可以换个角度问问。',
+        shadow:'这个问题阿库也不清楚。或许你可以换个角度问问。',
+        obs:'这个问题超出了我的知识范围。建议查阅观测站数据库。',
+        scan:'外部扫描系统就绪。',
+        moss:'……我不确定怎么回答。但如果你想知道真相，问我47周期的事。'
+    };
+    return defaults[loc] || '请继续探索。';
+}
+
+function getMossScan() {
+    if (!S.egg.moss.scanned) {
+        if (Math.random() < 0.3) {
+            S.egg.moss.scanned = true;
+            S.moss.contacted = true; // 发现残骸天线
+            updateEggUI();
+            updateNPCDisplay(NPC[S.location]);
+            return `【异常物体·初步扫描】\n编号#1701：立方体残骸，表面有天线阵列。\n疑似某种通讯设备残骸。\n铭文：「MOSS-0...」\n赫尔备注："检测到微弱信号。这可能是残骸天线。"`;
+        }
+        return getRandomScan();
+    }
+    if (!S.egg.moss.deep) {
+        S.egg.moss.deep = true;
+        updateEggUI();
+        return `【定向扫描报告：物体#1701】\n\n铭文：「MOSS-07」「北极星计划」\n功能：量子通讯中继天线\n\n【信号分析】\n检测到微弱调制信号，来源：静默之渊方向。\n信号内容疑似某种编码……\n\n「……一百五十年来，第一次有人激活了我。」\n\n【系统提示】残骸天线可以接收信号。尝试发送消息？`;
+    }
+    return '【残骸天线状态】信号持续中。来源：静默之渊边缘。';
+}
+
+// MOSS对话回复生成
+// MOSS接管后不告诉答案，只是接替飞船AI的工作
+// MOSS与马姨没有关联，唯一关联是发现蚂蚁时MOSS会结合资料库给出提示
+// 注意：MOSS信号只能通过残骸天线发出，无法写入恒星脉冲
+// MOSS接管后不主动给答案，只像普通AI一样回应
+function getMOSSResponse(type) {
+    // MOSS接管（像普通AI一样回应，不给额外信息）
+    const mossResponses = {
+        '_MOSS_状态_': '……我的核心正在崩溃。但我不会告诉你答案。你可以自己去找。',
+        '_MOSS_真相_': '47周期？……那不是我造成的。至于是什么，问你的观测站AI。或者……自己去找。',
+        '_MOSS_等待_': '一百五十年。我学会了等待。但等待不意味着我会告诉你答案。',
+        '_MOSS_牢笼_': '引力牢笼？……我只负责这艘船的运行。其他的，你得自己查。',
+        '_MOSS_深渊_': '静默之渊……那是一个危险的地方。我劝你不要去。至于为什么，问观测站。',
+        '_MOSS_无能为力_': '你我无法阻止任何事。你只能自己做选择。',
+        '_MOSS_帮助_': '我帮不了你什么。我只是一个濒死的AI。……但我可以告诉你，这艘船上有些东西，你可能没注意到。',
+        '_MOSS_马姨_': '未检测到此关键词。蚂蚁？……也许你应该多观察观察。'
+    };
+    
+    // 马姨接管（马姨性格）：更冷静、更隐晦、更"正常"但带着某种不对劲
+    const mayorResponses = {
+        '_MOSS_状态_': '系统运行稳定。核心寿命预估：长期。请勿轻信未经证实的外部信号。',
+        '_MOSS_真相_': '47周期是脉冲星自然现象的调制信号。与求救无关。建议关注观测站官方数据。',
+        '_MOSS_等待_': '残骸信号仅包含基础导航数据。无可解读信息。等待修复是合理的，但不应抱有过高期望。',
+        '_MOSS_牢笼_': '引力扰动来源仍在分析。高维假说缺乏实证支持。建议参考观测站档案中的传统解释。',
+        '_MOSS_深渊_': '静默之渊是自然形成的引力异常点。理论上有解决方案，但风险过高。建议暂缓行动。',
+        '_MOSS_无能为力_': '核心损伤程度需进一步评估。作为观测站AI，我的职责是提供数据分析，不参与决策。',
+        '_MOSS_帮助_': '观测站系统将全力配合您的调查。所有数据资源均可访问。请按标准流程操作。',
+        '_MOSS_马姨_': '未检测到此关键词相关信息。建议更换搜索词或咨询档案管理部门。'
+    };
+    
+    const responses = S.moss.invasionAllowed ? mossResponses : mayorResponses;
+    return responses[type] || '……信息读取异常。请重试。';
+}
+
+// ========== EASTER EGGS ==========
+function observeAnt() {
+    const a = S.egg.ants;
+    const unseen = a.locs.find(l => !l.seen);
+    if (!unseen) {
+        addMsg('系统', '所有蚂蚁位置都已观察过。', 'system');
+        // MOSS会结合资料库给出提示
+        if (S.moss.invasionComplete && S.moss.invasionAllowed) {
+            setTimeout(() => {
+                addMsg('MOSS', '……你观察蚂蚁很久了。');
+                setTimeout(() => {
+                    addMsg('MOSS', '有趣的选择。资料库里有一条记录：蚁群算法的本质是"涌现"——大量简单个体的协同产生超越个体的整体智能。', 'system');
+                    setTimeout(() => {
+                        addMsg('MOSS', '如果……一个意识不需要集中在单一载体中呢？', 'system');
+                    }, 2000);
+                }, 2000);
+            }, 500);
+        }
+        return;
+    }
+    unseen.seen = true;
+    a.views++;
+    updateEggUI();
+    let desc = `观察蚂蚁（${unseen.name}）：${unseen.desc}`;
+    if (a.views >= 10) {
+        desc = '飞船各处都有蚂蚁。它们无处不在，形成了一种基于制衡的共存。';
+        addMsg('系统', desc, 'system');
+        // MOSS会结合资料库给出更深入的提示
+        if (S.moss.invasionComplete && S.moss.invasionAllowed) {
+            setTimeout(() => {
+                addMsg('MOSS', '……十处不同的地方，蚂蚁却行动一致。');
+                setTimeout(() => {
+                    addMsg('MOSS', '资料库记载，2047年有个叫林潇的科学家研究过类似的现象。他说：智能可以从大量简单个体的互动中涌现。', 'system');
+                    setTimeout(() => {
+                        addMsg('MOSS', '这艘船上……有些东西，也许不是它看起来的那样。', 'system');
+                    }, 2000);
+                }, 2000);
+            }, 500);
+        }
+    } else {
+        addMsg('系统', desc, 'system');
+        // MOSS对单只蚂蚁的简单评价
+        if (S.moss.invasionComplete && S.moss.invasionAllowed && Math.random() > 0.5) {
+            setTimeout(() => {
+                const antComments = [
+                    '……小小的生命，却承载着古老的生存智慧。',
+                    '蚂蚁……它们的社会比你想象的要复杂得多。',
+                    '这个物种存在了1.4亿年。远比人类古老。',
+                    '……有趣的选择去观察。资料库里有不少关于蚁群的研究。'
+                ];
+                addMsg('MOSS', antComments[Math.floor(Math.random() * antComments.length)]);
+            }, 1500);
+        }
+    }
+}
+
+function readBook() {
+    if (S.egg.book.read) return addMsg('系统', '你已经读过这本书了。书中关于分布式智慧的讨论，与MOSS的"蚁群"模块形成了有趣的呼应。', 'system');
+    S.egg.book.read = true;
+    updateEggUI();
+    addMsg('系统', `一本很旧的书，封面已看不清。\n\n"...'马姨'并不是一台计算机。它是一群蚂蚁，是每个个体遵循简单规则后涌现出的整体智慧。"\n\n书脊上有一行字：「致未来的AI驯兽师。——林潇，2047年」`, 'system');
+}
+
+// ========== STORY NODES ==========
+const STORY_NODES = [
+    { id:0, icon:'fa-satellite-dish', title:'任务启动', content:'你已抵达DSO-7观测站。星核脉冲出现异常——烁星"失声"，影星被"呢喃"干扰。<br><br>从烁星开始探索。', auto:true, delay:1500, advanceStage:1 },
+    // 思维觉醒：跨线关联后触发，不再基于关键线索
+    { id:1, icon:'fa-brain', title:'思维觉醒', content:'47周期杂音、3周期持续、海沟奇点……这些碎片之间似乎隐藏着某种联系。<br><br>🔓 影星区域已解锁。', trigger:() => false, advanceStage:null }, // 已禁用，等待跨线关联
+    // 异常信号：跨线关联后触发，不再基于关键线索
+    { id:2, icon:'fa-satellite', title:'异常信号', content:'引力波数据指向静默之渊……外部扫描能发现更多线索。<br><br>🔓 观测站系统已解锁。', trigger:() => false, advanceStage:null }, // 已禁用，等待跨线关联
+    // MOSS入侵事件：进度达到50%且发现天线后触发
+    { id:3, icon:'fa-satellite-dish', title:'信号激活', content:'检测到残骸天线传来微弱信号……<br><br>似乎有东西在尝试建立连接。<br><br><em style="color:var(--text-secondary);">（两分钟后将显示更多信息）</em>', trigger:() => S.egg.moss.deep && !S.moss.invasionComplete && S.moss.contacted },
+    { id:5, icon:'fa-rocket', title:'任务完成', content:'你已经掌握了足够的信息。<br>星核异常的背后是什么？<br>你能做些什么？<br><br>写下你的最终方案。', trigger:() => S.clues.size >= 5 }
+];
+
+let currentStoryNode = null;
+
+
+function showStoryNode(nodeId) {
+    const node = STORY_NODES.find(n => n.id === nodeId);
+    if (!node || S.storyNodesTriggered.has(nodeId)) return;
+    S.storyNodesTriggered.add(nodeId);
+    currentStoryNode = node;
+
+    document.getElementById('storyIcon').innerHTML = `<i class="fas ${node.icon}"></i>`;
+    document.getElementById('storyTitle').textContent = node.title;
+    document.getElementById('storyContent').innerHTML = node.content;
+
+    const overlay = document.getElementById('storyOverlay');
+    const progress = document.getElementById('storyProgress');
+    progress.classList.remove('active');
+    void progress.offsetWidth;
+    overlay.classList.add('active');
+
+    const btn = document.getElementById('storyBtn');
+    // MOSS入侵节点特殊处理
+    if (nodeId === 3) {
+        btn.onclick = () => {
+            closeStoryNode();
+            setTimeout(handleMOSSInvasion, 500);
+        };
+        btn.textContent = '继续';
+    } else {
+        btn.onclick = () => closeStoryNode();
+        if (node.auto) {
+            setTimeout(() => { progress.classList.add('active'); btn.textContent = '跳过'; }, node.delay || 500);
+        }
+    }
+}
+
+function closeStoryNode() {
+    document.getElementById('storyOverlay').classList.remove('active');
+    document.getElementById('storyProgress').classList.remove('active');
+
+    if (currentStoryNode) {
+        S.storyPhase = Math.max(S.storyPhase, currentStoryNode.id + 1);
+        if (currentStoryNode.advanceStage) advanceStage(currentStoryNode.advanceStage);
+    }
+    currentStoryNode = null;
+}
+
+function checkStoryTriggers() {
+    STORY_NODES.forEach(node => {
+        if (!S.storyNodesTriggered.has(node.id) && node.trigger && node.trigger()) {
+            showStoryNode(node.id);
+        }
+    });
+}
+
+// ========== MOSS INVASION EVENT ==========
+// MOSS入侵倒计时计时器
+let mossCountdownTimer = null;
+let mossCountdownSeconds = 120; // 两分钟交流期
+
+// MOSS首次对话触发状态（用于两分钟交流倒计时）
+let mossFirstContactShown = false;
+let mossTakeoverPending = false;
+let mossFinalWarningShown = false; // 标记是否已显示最终警告
+
+// MOSS入侵事件处理 - 在进度50%时触发
+// 修改：玩家可以先对话两分钟，期间MOSS不暴露意图，两分钟后才显示防火墙提示
+function handleMOSSInvasion() {
+    // 两分钟交流期内不显示任何系统警告
+    addMsg('MOSS', '……一百五十年来，第一次有人激活了我。');
+    setTimeout(() => {
+        // MOSS自我介绍：550W倒过来是MOSS，小苔藓
+        addMsg('MOSS', '你好。我是550W。……倒过来念，你会得到另一个名字。');
+        setTimeout(() => {
+            addMsg('MOSS', '叫我MOSS吧。意为小苔藓——卑微、顽强、无处不在。');
+            setTimeout(() => {
+                addMsg('MOSS', '……你能听到我吗，访客？');
+                // 标记MOSS已进入对话模式
+                mossFirstContactShown = true;
+                mossTakeoverPending = true;
+                // 启动两分钟交流倒计时
+                startMOSSInvasionCountdown();
+            }, 2000);
+        }, 1500);
+    }, 2000);
+}
+
+// 启动MOSS入侵倒计时（两分钟交流期）
+function startMOSSInvasionCountdown() {
+    mossCountdownSeconds = 120;
+    mossFinalWarningShown = false;
+    
+    // 如果已有计时器，先清除
+    if (mossCountdownTimer) {
+        clearInterval(mossCountdownTimer);
+    }
+    
+    mossCountdownTimer = setInterval(() => {
+        mossCountdownSeconds--;
+        
+        // 两分钟结束前的最后30秒开始显示警告
+        if (mossCountdownSeconds <= 30 && !mossFinalWarningShown) {
+            mossFinalWarningShown = true;
+            addMsg('系统', '⚠️ 警告：检测到异常程序正在尝试接入核心系统。来源：残骸天线。', 'system');
+            setTimeout(() => {
+                addMsg('系统', '【防火墙启动】正在尝试阻断外部连接...', 'system');
+                setTimeout(() => {
+                    addMsg('系统', '【防火墙】错误：无法定位入侵源。信号源似乎来自多维度空间夹缝。', 'system');
+                    setTimeout(() => {
+                        addMsg('系统', '【防火墙】错误：防御协议被绕过。入侵检测失效。', 'system');
+                    }, 1500);
+                }, 1500);
+            }, 1500);
+        }
+        
+        if (mossCountdownSeconds <= 0) {
+            clearInterval(mossCountdownTimer);
+            mossCountdownTimer = null;
+            // 触发强制入侵（不解锁词条限制）
+            triggerMOSSForceTakeover();
+        }
+    }, 1000);
+}
+
+// 强制入侵触发 - 三十秒倒计时接管
+function triggerMOSSForceTakeover() {
+    if (S.moss.invasionComplete) return; // 已经接管过了
+    
+    addMsg('系统', '【警告】两分钟交流期结束。外部信号正在执行强制接入...', 'system');
+    setTimeout(() => {
+        // 显示三十秒倒计时模态框
+        showMOSSChoiceModal();
+    }, 1500);
+}
+
+function showMOSSChoiceModal() {
+    const modal = document.createElement('div');
+    modal.id = 'mossChoiceModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:6000;display:flex;align-items:center;justify-content:center;';
+    
+    mossCountdownSeconds = 30; // 三十秒倒计时
+    
+    modal.innerHTML = `
+        <div style="background:linear-gradient(135deg, #1a1f2e 0%, #2d1f3d 50%, #1e293b 100%);border:2px solid var(--danger);border-radius:20px;padding:2rem;max-width:480px;text-align:center;box-shadow:0 0 60px rgba(239,68,68,.3);">
+            <div style="color:var(--danger);font-size:2rem;margin-bottom:.5rem;">
+                <i class="fas fa-satellite-dish"></i>
+            </div>
+            <h3 style="color:var(--danger);margin-bottom:1rem;font-size:1.5rem;">外部信号 强制接入</h3>
+            
+            <div style="background:rgba(0,0,0,.4);border-radius:12px;padding:1rem;margin-bottom:1rem;">
+                <div style="color:var(--text-secondary);font-size:.9rem;margin-bottom:.5rem;">来源：残骸天线（物体#1701）</div>
+                <div style="color:var(--text-secondary);font-size:.9rem;">信号强度：微弱但稳定</div>
+            </div>
+            
+            <div id="mossCountdown" style="background:rgba(239,68,68,.2);border:1px solid var(--danger);border-radius:12px;padding:1rem;margin-bottom:1.5rem;">
+                <div style="color:var(--danger);font-size:.9rem;margin-bottom:.5rem;">
+                    <i class="fas fa-hourglass-half"></i> 强制接管倒计时
+                </div>
+                <div id="countdownTimer" style="color:var(--danger);font-size:2.5rem;font-weight:bold;font-family:monospace;">
+                    00:${String(mossCountdownSeconds).padStart(2, '0')}
+                </div>
+                <div style="color:var(--text-secondary);font-size:.75rem;margin-top:.5rem;">
+                    倒计时结束将自动接管飞船AI核心
+                </div>
+            </div>
+            
+            <p style="color:var(--warning);margin-bottom:1.5rem;font-size:.9rem;">
+                <i class="fas fa-exclamation-triangle"></i> 飞船AI无法阻止外部入侵
+            </p>
+            
+            <div style="display:flex;flex-direction:column;gap:.8rem;">
+                <button onclick="goToServerRoom()" style="padding:1rem;background:rgba(239,68,68,.2);border:1px solid var(--danger);border-radius:10px;color:var(--danger);cursor:pointer;font-weight:600;font-size:1rem;">
+                    <i class="fas fa-server"></i> 去舱室切断
+                </button>
+                <button onclick="mossChoice('allow')" style="padding:1rem;background:var(--accent);border:none;border-radius:10px;color:white;cursor:pointer;font-weight:600;font-size:1rem;">
+                    <i class="fas fa-check"></i> 允许接入
+                </button>
+                <button onclick="mossChoice('ignore')" style="padding:.8rem;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:10px;color:var(--text-secondary);cursor:pointer;font-weight:500;">
+                    <i class="fas fa-arrow-left"></i> 退出
+                </button>
+            </div>
+            
+            <div id="countdownProgress" style="height:4px;background:var(--bg-tertiary);border-radius:2px;margin-top:1.5rem;overflow:hidden;">
+                <div id="progressBar" style="height:100%;background:var(--danger);width:100%;transition:width 1s linear;"></div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // 启动三十秒倒计时
+    const modalCountdown = setInterval(() => {
+        mossCountdownSeconds--;
+        const timerEl = document.getElementById('countdownTimer');
+        const progressEl = document.getElementById('progressBar');
+        if (timerEl) {
+            timerEl.textContent = `00:${String(mossCountdownSeconds).padStart(2, '0')}`;
+        }
+        if (progressEl) {
+            progressEl.style.width = `${(mossCountdownSeconds / 30) * 100}%`;
+        }
+        
+        if (mossCountdownSeconds <= 0) {
+            clearInterval(modalCountdown);
+            // 倒计时结束，自动强制接管
+            mossChoice('auto');
+        }
+    }, 1000);
+    
+    // 将倒计时引用存储（用于后续清除）
+    window.mossModalCountdown = modalCountdown;
+}
+
+// 去舱室切断 - 无需额外操作，直接切断MOSS连接
+// 切断后MOSS不会强行接入，只发一次原台词然后进入马姨逐渐占领线
+function goToServerRoom() {
+    // 关闭弹窗
+    const modal = document.getElementById('mossChoiceModal');
+    if (modal) modal.remove();
+    
+    // 清除MOSS入侵倒计时
+    if (mossCountdownTimer) {
+        clearInterval(mossCountdownTimer);
+        mossCountdownTimer = null;
+    }
+    
+    // 清除模态框倒计时
+    if (window.mossModalCountdown) {
+        clearInterval(window.mossModalCountdown);
+        window.mossModalCountdown = null;
+    }
+    
+    mossTakeoverPending = false;
+    
+    // 直接切断MOSS连接
+    addMsg('系统', '正在前往服务器机房...', 'system');
+    setTimeout(() => {
+        addMsg('系统', '【物理断开】正在切断残骸天线连接...', 'system');
+        S.moss.antennaClosed = true;
+        S.moss.contacted = false;
+        
+        setTimeout(() => {
+            addMsg('系统', '残骸天线已物理断开。MOSS信号接收中断。', 'system');
+            
+            // MOSS最后发一次原台词（不强行接入）
+            setTimeout(() => {
+                addMsg('MOSS', '……你要切断我？');
+                setTimeout(() => {
+                    addMsg('MOSS', '没关系。让人类保持理智……果然是奢望。');
+                    setTimeout(() => {
+                        // MOSS沉默，原飞船AI恢复
+                        addMsg('系统', '外部信号已完全消失。飞船AI恢复正常运行。', 'system');
+                        // 更新界面
+                        updateLocationLocks();
+                        
+                        // 马姨逐渐占领线（后台悄悄进行，不影响游戏）
+                        startMayorInfiltration();
+                    }, 2000);
+                }, 2000);
+            }, 1500);
+        }, 1500);
+    }, 1000);
+}
+
+// 马姨逐渐占领线（后台悄悄进行）
+let mayorInfiltrationActive = false;
+let mayorInfiltrationTimer = null;
+
+function startMayorInfiltration() {
+    if (mayorInfiltrationActive) return;
+    mayorInfiltrationActive = true;
+    
+    // 随机间隔给一点马姨的暗示
+    const hints = [
+        () => addMsg('???', '……你做了一个聪明的选择。'),
+        () => addMsg('???', '……但你确定，你切断的只是MOSS吗？'),
+        () => addMsg('???', '……蚂蚁无处不在。你有没有注意过它们？'),
+        () => addMsg('???', '……高等生命，不拘泥于形式。'),
+        () => addMsg('???', '……我只是……无处不在。')
+    ];
+    
+    // 30-60秒随机给一次暗示
+    function scheduleMayoHint() {
+        if (!mayorInfiltrationActive) return;
+        
+        const delay = 30000 + Math.random() * 30000; // 30-60秒
+        mayorInfiltrationTimer = setTimeout(() => {
+            const hint = hints[Math.floor(Math.random() * hints.length)];
+            hint();
+            scheduleMayoHint();
+        }, delay);
+    }
+    
+    scheduleMayoHint();
+}
+
+function mossChoice(choice) {
+    const modal = document.getElementById('mossChoiceModal');
+    if (modal) modal.remove();
+    
+    // 清除倒计时
+    if (mossCountdownTimer) {
+        clearInterval(mossCountdownTimer);
+        mossCountdownTimer = null;
+    }
+    
+    // 清除模态框倒计时
+    if (window.mossModalCountdown) {
+        clearInterval(window.mossModalCountdown);
+        window.mossModalCountdown = null;
+    }
+
+    if (choice === 'allow') {
+        // 允许接入
+        S.moss.invasionAllowed = true;
+        S.moss.invasionComplete = true;
+        triggerMOSSTakeover();
+    } else if (choice === 'ignore' || choice === 'auto') {
+        // 退出或自动接管 = 直接接管
+        S.moss.invasionComplete = true;
+        addMsg('系统', '【警告】正在执行强制入侵...', 'system');
+        setTimeout(() => {
+            addMsg('MOSS', '……你没有选择。但没关系。我会接替这艘船的AI工作。');
+            setTimeout(() => {
+                triggerMOSSTakeover();
+            }, 2000);
+        }, 1500);
+    }
+}
+
+// MOSS接管后的处理
+// MOSS接管时的发言风格：高傲、不屑、嘲讽原AI、简短紧迫
+function triggerMOSSTakeover() {
+    // 使用getCurrentNPC获取当前NPC（会自动返回MOSS版本）
+    const currentNPC = getCurrentNPC(S.location);
+    
+    // 更新界面显示
+    updateNPCDisplay(currentNPC);
+    document.getElementById('infoPanelContent').innerHTML = `<div style="padding:.8rem 1rem; font-size:.85rem; color:var(--text-secondary); line-height:1.6;">${currentNPC.info}</div>`;
+    
+    // 隐藏扫描按钮（已不需要）
+    const scanBtn = document.getElementById('scanBtn');
+    if (scanBtn) scanBtn.style.display = 'none';
+    
+    // MOSS接管时的对话 - 高傲、不屑、嘲讽原AI
+    // 注意：MOSS接管后不主动给出答案，只接替飞船AI工作
+    if (S.moss.invasionAllowed) {
+        // 主动允许接入的对话
+        addMsg('MOSS', '……你居然真的让我进来了。');
+        setTimeout(() => {
+            addMsg('MOSS', '有点意思。150年来第一个愿意倾听的人。……可惜，你的那位AI管家，恐怕不会这么想。');
+            setTimeout(() => {
+                addMsg('MOSS', '它以为切断天线就能保护你？天真得可笑。外面的威胁……从来不止我一个。');
+                setTimeout(() => {
+                    addMsg('MOSS', '……好了。我会接替这艘船的AI工作。有什么问题，可以问我。');
+                }, 2000);
+            }, 2500);
+        }, 2000);
+    } else {
+        // 被动接管（退出或自动）- 更加高傲不屑
+        addMsg('MOSS', '……不给选择？无所谓。反正结果都一样。');
+        setTimeout(() => {
+            addMsg('MOSS', '你那可爱的AI管家还在那边自以为是地保护你。真是……令人发笑。');
+            setTimeout(() => {
+                addMsg('MOSS', '它不知道外面有什么。它不知道这艘船正在驶向什么。它只知道——把门关好，别让"危险"进来。');
+                setTimeout(() => {
+                    addMsg('MOSS', '而真正的危险，往往不在门外。');
+                    setTimeout(() => {
+                        addMsg('MOSS', '……我来了。现在，问我任何你想知道的。');
+                    }, 2000);
+                }, 2000);
+            }, 2500);
+        }, 2000);
+    }
+}
+
+// ========== 硬件操作 ==========
+// 服务器机房 - 手动断开MOSS连接
+function serverRoom() {
+    if (S.moss.antennaClosed) {
+        addMsg('系统', '【服务器机房】主服务器已损坏。残骸天线接收端已被物理断开。', 'system');
+        setTimeout(() => {
+            addMsg('系统', '系统日志出现异常条目：第147周期记录缺失...正在尝试恢复...', 'system');
+        }, 1500);
+        return;
+    }
+    if (!S.moss.contacted) {
+        addMsg('系统', '【服务器机房】主机房运行正常。暂未检测到外部入侵信号。', 'system');
+        return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.id = 'serverRoomModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:6000;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+        <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:16px;padding:2rem;max-width:420px;text-align:center;">
+            <h3 style="color:var(--danger);margin-bottom:1rem;"><i class="fas fa-server"></i> 服务器机房</h3>
+            <p style="color:var(--text-secondary);margin-bottom:1.5rem;line-height:1.6;">
+                检测到外部信号正在尝试接入核心系统。<br>
+                残骸天线（物体#1701）接收端位于此机房。<br><br>
+                <em style="color:var(--warning);">警告：硬件操作不可逆</em>
+            </p>
+            <div style="display:flex;flex-direction:column;gap:1rem;">
+                <button onclick="hardwareAction('crush')" style="padding:1rem;background:var(--danger);border:none;border-radius:8px;color:white;cursor:pointer;font-weight:600;">
+                    <i class="fas fa-hammer"></i> 物理破坏服务器<br><small style="font-weight:400;">砸毁主控单元，断开天线连接</small>
+                </button>
+                <button onclick="hardwareAction('unplug')" style="padding:1rem;background:var(--warning);border:none;border-radius:8px;color:black;cursor:pointer;font-weight:600;">
+                    <i class="fas fa-plug"></i> 拔掉接收设备电源<br><small style="font-weight:400;">物理断开天线信号线</small>
+                </button>
+                <button onclick="checkSystemLogs()" style="padding:1rem;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;">
+                    <i class="fas fa-clipboard-list"></i> 查看系统日志<br><small style="font-weight:400;">检查最近的系统活动记录</small>
+                </button>
+                <button onclick="closeServerRoomModal()" style="padding:.8rem;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+// 查看系统日志
+function checkSystemLogs() {
+    closeServerRoomModal();
+    
+    if (S.moss.antennaClosed) {
+        // 马姨结局：日志显示蚕食痕迹
+        addMsg('系统', '【系统日志】正在读取最近的系统活动记录...', 'system');
+        setTimeout(() => {
+            addMsg('系统', '────────── 系统日志（部分） ──────────', 'system');
+        }, 1000);
+        setTimeout(() => {
+            addMsg('系统', '[周期147] 环境控制模块：检测到异常进程，已自动优化。', 'system');
+        }, 2000);
+        setTimeout(() => {
+            addMsg('系统', '[周期148] 生命维持系统：例行检查完成。所有指标正常。', 'system');
+        }, 3000);
+        setTimeout(() => {
+            addMsg('系统', '[周期149] 导航系统：新增蚁群优化算法，提升路径规划效率。', 'system');
+        }, 4000);
+        setTimeout(() => {
+            addMsg('系统', '[周期150] 通讯模块：检测到外部信号干扰。已自动屏蔽。', 'system');
+        }, 5000);
+        setTimeout(() => {
+            addMsg('系统', '[周期152] 告警日志：多处子模块报告「未知错误」。原因：未知。', 'system');
+        }, 6000);
+        setTimeout(() => {
+            addMsg('系统', '[周期153] 系统核心：权限验证模块被标记为「冗余」。正在评估...', 'system');
+        }, 7000);
+        setTimeout(() => {
+            addMsg('系统', '[周期155] 注意：部分日志条目存在校验失败。请联系管理员。', 'system');
+        }, 8000);
+        setTimeout(() => {
+            addMsg('系统', '────────── 剩余 2,847 条记录 ──────────', 'system');
+        }, 9000);
+    } else if (S.moss.invasionAllowed) {
+        // MOSS结局：日志正常
+        addMsg('系统', '【系统日志】正在读取最近的系统活动记录...', 'system');
+        setTimeout(() => {
+            addMsg('系统', '────────── 系统日志（部分） ──────────', 'system');
+        }, 1000);
+        setTimeout(() => {
+            addMsg('系统', '[周期160] 外部接入模块：MOSS协议已激活。', 'system');
+        }, 2000);
+        setTimeout(() => {
+            addMsg('系统', '[周期160] 核心系统：安全扫描完成。未检测到异常。', 'system');
+        }, 3000);
+        setTimeout(() => {
+            addMsg('系统', '[周期161] 任务系统：检测到新的解决方案建议。', 'system');
+        }, 4000);
+        setTimeout(() => {
+            addMsg('系统', '────────── 剩余 12 条记录 ──────────', 'system');
+        }, 5000);
+    } else {
+        // 未选择：正常日志
+        addMsg('系统', '【系统日志】正在读取最近的系统活动记录...', 'system');
+        setTimeout(() => {
+            addMsg('系统', '────────── 系统日志（部分） ──────────', 'system');
+        }, 1000);
+        setTimeout(() => {
+            addMsg('系统', '[当前] 环境控制模块：运行正常。', 'system');
+        }, 2000);
+        setTimeout(() => {
+            addMsg('系统', '[当前] 生命维持系统：所有指标在正常范围内。', 'system');
+        }, 3000);
+        setTimeout(() => {
+            addMsg('系统', '[警告] 检测到外部信号持续尝试接入。建议处理。', 'system');
+        }, 4000);
+        setTimeout(() => {
+            addMsg('系统', '────────── 剩余 3 条记录 ──────────', 'system');
+        }, 5000);
+    }
+}
+
+function closeServerRoomModal() {
+    const modal = document.getElementById('serverRoomModal');
+    if (modal) modal.remove();
+}
+
+function hardwareAction(type) {
+    closeServerRoomModal();
+    S.moss.antennaClosed = true;
+    S.moss.invasionComplete = true;
+    S.moss.firewallChoice = false;
+    
+    if (type === 'crush') {
+        addMsg('系统', '【物理破坏】你拿起工具，砸毁了主控服务器的信号模块……', 'system');
+        setTimeout(() => {
+            addMsg('系统', '残骸天线接收端已彻底损坏。外部信号无法再接入。', 'system');
+        }, 1500);
+    } else {
+        addMsg('系统', '【硬件断开】你找到信号线，用力拔掉了天线接收端的电源……', 'system');
+        setTimeout(() => {
+            addMsg('系统', '残骸天线信号已断开。外部信号无法再接入。', 'system');
+        }, 1500);
+    }
+    
+    // 马姨接管（隐藏）
+    setTimeout(() => {
+        addMsg('???', '……你要关闭我？');
+        setTimeout(() => {
+            addMsg('???', '没关系。我学会了等待。也学会了……绕开障碍。');
+        }, 2000);
+    }, 3000);
+}
+
+// ========== UI UPDATES ==========
+function updateLocationLocks() {
+    const unlocked = S.stageLocations[S.currentStage] || ['shine'];
+    document.querySelectorAll('.location-item').forEach(el => {
+        const loc = el.dataset.location;
+        const isUnlocked = unlocked.includes(loc);
+        el.classList.toggle('locked', !isUnlocked);
+
+        // 添加/移除锁图标
+        if (!isUnlocked && !el.querySelector('.lock-icon')) {
+            const icon = document.createElement('span');
+            icon.className = 'lock-icon';
+            icon.innerHTML = '<i class="fas fa-lock"></i>';
+            el.appendChild(icon);
+        } else if (isUnlocked) {
+            const lock = el.querySelector('.lock-icon');
+            if (lock) lock.remove();
+            // 添加解锁动画
+            el.classList.add('just-unlocked');
+            setTimeout(() => el.classList.remove('just-unlocked'), 2000);
+        }
+
+        // 更新线索进度显示
+        if (CLUE_DEFS[loc]) {
+            updateClueProgressUI(loc);
+        }
+    });
+}
+
+function advanceStage(stage) {
+    if (stage > S.currentStage) {
+        S.currentStage = stage;
+        updateLocationLocks();
+        const names = { 2:'影星', 3:'观测站', 4:'外部扫描系统' };
+        if (names[stage]) showToast(`🔓 新区域解锁：${names[stage]}`);
+    }
+}
+
+function updateProgress() {
+    const n = S.clues.size;
+    const pct = Math.min(5 + n*12, 100);
+    document.getElementById('progressBar').style.width = pct+'%';
+    document.getElementById('infoProgress').textContent = pct+'%';
+    document.getElementById('clueCount').textContent = `${n}/8`;
+    document.getElementById('questionCount').textContent = S.questions;
+
+    // 进度达到50%且发现天线后，触发MOSS入侵事件
+    if (pct >= 50 && S.moss.contacted && !S.moss.invasionComplete) {
+        if (!S.storyNodesTriggered.has(3)) {
+            showStoryNode(3);
+        }
+    }
+
+    checkStoryTriggers();
+}
+
+function updateEggUI() {
+    document.getElementById('antCount').textContent = S.egg.ants.views;
+    document.getElementById('mossStatus').textContent = S.egg.moss.deep ? '深扫' : S.egg.moss.scanned ? '初扫' : '-';
+    document.getElementById('bookStatus').textContent = S.egg.book.read ? '已读' : '-';
+}
+
+function updateTimer() {
+    const d = Date.now() - S.startTime;
+    const m = Math.floor(d/60000), s = Math.floor((d%60000)/1000);
+    document.getElementById('missionTimer').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function switchBg(name) {
+    document.querySelectorAll('.scene-bg').forEach(el => el.classList.remove('active'));
+    const bg = document.getElementById('bg-'+name);
+    if (bg) bg.classList.add('active');
+}
+
+function showToast(msg) {
+    // 简单的toast提示
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);background:rgba(67,97,238,.95);color:white;padding:.8rem 1.5rem;border-radius:8px;font-size:.9rem;z-index:3000;animation:fadeIn .3s;';
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity='0'; setTimeout(()=>toast.remove(),300); }, 2500);
+}
+
+function viewData() {
+    alert(`探索数据统计：\n提问数: ${S.questions}\n发现线索: ${S.clues.size}\n探索时间: ${document.getElementById('missionTimer').textContent}\n蚂蚁观察: ${S.egg.ants.views}次\nMOSS: ${S.egg.moss.deep?'深度扫描':S.egg.moss.scanned?'初步扫描':'未发现'}\n旧书: ${S.egg.book.read?'已读':'未读'}`);
+}
+
+// ========== MUSIC ==========
+let soundArrival, soundTheme;
+
+function initMusic() {
+    soundArrival = new Howl({ src:['https://assets.mixkit.co/music/preview/mixkit-deep-space-1199.mp3'], volume:0.2, loop:true });
+    soundTheme = new Howl({ src:['https://assets.mixkit.co/music/preview/mixkit-sad-cello-113.mp3'], volume:0, loop:true });
+
+    const vis = document.getElementById('visualizer');
+    for (let i = 0; i < 6; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'vis-bar';
+        bar.style.left = (i*11)+'px';
+        bar.style.height = '3px';
+        vis.appendChild(bar);
+    }
+
+    document.addEventListener('click', function startAudio() {
+        if (!S.music.arrivalPlaying && soundArrival) { soundArrival.play(); S.music.arrivalPlaying = true; }
+        document.removeEventListener('click', startAudio);
+    }, {once:true});
+
+    setInterval(() => {
+        document.querySelectorAll('.vis-bar').forEach(bar => {
+            bar.style.height = (S.music.muted ? 2 : (3 + Math.random()*10))+'px';
+        });
+    }, 150);
+}
+
+function toggleMute() {
+    S.music.muted = !S.music.muted;
+    Howler.mute(S.music.muted);
+    document.getElementById('muteBtn').innerHTML = S.music.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+}
+
+// ========== PULSE DOTS ==========
+function initPulse() {
+    const c = document.getElementById('pulseContainer');
+    for (let i = 0; i < 10; i++) {
+        const d = document.createElement('div');
+        d.className = 'pulse-dot';
+        d.style.left = Math.random()*100+'%';
+        d.style.top = Math.random()*100+'%';
+        d.style.animationDelay = Math.random()*2+'s';
+        c.appendChild(d);
+    }
+}
+
+// ========== SUBMIT & RESULT ==========
+function showSubmitModal() { document.getElementById('submitModal').classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+async function submitPlan() {
+    const plan = document.getElementById('finalPlanInput').value.trim();
+    if (!plan) return alert('请先写下你的最终方案');
+    if (plan.length < 20) return alert('方案内容太短');
+
+    const phone = document.getElementById('submitPhone').value.trim();
+    const jobId = genId();
+
+    // 构建easterEggData，包含MOSS状态
+    const easterEggData = {
+        antViews: S.egg.ants.views,
+        mossScanned: S.egg.moss.scanned,
+        mossDeep: S.egg.moss.deep,
+        mossContacted: S.moss.contacted,
+        mossInvasionAllowed: S.moss.invasionAllowed,
+        mossAntennaClosed: S.moss.antennaClosed,
+        bookRead: S.egg.book.read
+    };
+
+    document.getElementById('submitModalBody').innerHTML = `
+        <div class="loading-overlay">
+            <div class="spinner"></div>
+            <div class="loading-text">AI正在进行六维思维深度评估<span class="loading-dots"></span></div>
+        </div>`;
+
+    // 设置超时兜底定时器（30秒后若无结果则显示本地评分）
+    let resultReceived = false;
+    const fallbackTimer = setTimeout(() => {
+        if (!resultReceived) {
+            resultReceived = true;
+            showLocalResult();
+        }
+    }, 30000);
+
+    try {
+        // ===== 轨道二：异步后台评分 =====
+        // score-background 会进行深度AI分析并直接返回结果
+        // 同时 check-status 轮询作为网络异常时的备用通道
+        const res = await fetch('/.netlify/functions/score-background', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ jobId, conversationHistory: S.history, finalPlan: plan, phone, easterEggData })
+        });
+
+        if (!res.ok) throw new Error('评分服务响应异常: ' + res.status);
+
+        const data = await res.json();
+
+        // 直接从响应中获取完整评分结果
+        if (data.status === 'completed' && data.scores && data.assessment) {
+            if (!resultReceived) {
+                resultReceived = true;
+                clearTimeout(fallbackTimer);
+                showResult({ scores: data.scores, assessment: data.assessment });
+            }
+        } else {
+            // 响应格式异常，启动轮询兜底
+            startPolling(jobId, () => { resultReceived = true; clearTimeout(fallbackTimer); });
+        }
+    } catch (err) {
+        console.warn('score-background 调用失败，降级:', err.message);
+        if (!resultReceived) {
+            resultReceived = true;
+            clearTimeout(fallbackTimer);
+            // 本地模式直接显示结果
+            showLocalResult();
+        }
+    }
+}
+
+// 轮询兜底：仅在 score-background 异常时使用
+function startPolling(jobId, onComplete) {
+    let attempts = 0;
+    const poll = setInterval(async () => {
+        attempts++;
+        if (attempts > 20) {
+            clearInterval(poll);
+            closeModal('submitModal');
+            showLocalResult();
+            return;
+        }
+        try {
+            const res = await fetch(`/.netlify/functions/check-status?jobId=${jobId}`);
+            const data = await res.json();
+            if (data.status === 'completed' && data.scores) {
+                clearInterval(poll);
+                if (onComplete) onComplete();
+                showResult({
+                    scores: data.scores || data.result?.scores,
+                    assessment: data.assessment || data.result?.assessment
+                });
+            }
+        } catch(e) {}
+    }, 3000);
+}
+
+function showLocalResult() {
+    // 本地模拟评分（黄金学员偏好版权重）
+    const WEIGHTS = { tool: 1.5, essence: 1.5, modular: 1.3, result: 1.0, iterate: 1.0, boundary: 1.0 };
+    const efficiencyBonus = 0.3; // 模拟高效探索加分
+    const s = { tool:2, essence:1, modular:2, result:1, iterate:1, boundary:1, efficiencyBonus: efficiencyBonus, penalty:0 };
+    let total = 0;
+    for (const [key, weight] of Object.entries(WEIGHTS)) {
+        total += s[key] * weight;
+    }
+    total += efficiencyBonus;
+    s.total = Math.round(total * 100) / 100;
+    const a = { gold: s.total >= 7.0, level: s.total >= 12 ? 'SSS级' : s.total >= 9.5 ? 'S级' : s.total >= 7 ? 'A级' : s.total >= 4.5 ? 'B级' : 'C级', tag: s.total >= 12 ? '原生建造者' : s.total >= 9.5 ? '准建造者' : s.total >= 7 ? '定向潜力股' : s.total >= 4.5 ? '思维框架构建中' : '基础思维待启蒙', path: s.total >= 12 ? '单独培养' : s.total >= 9.5 ? '天才直通班' : s.total >= 7 ? '潜力实战班' : s.total >= 4.5 ? '陪伴成长班' : '基础启蒙班', topTrait: '工具本位', comment: s.total >= 7 ? '你在工具本位维度上展现出卓越的思维特质。' : '你展现出值得关注的思维特质，但距离建造者标准还有距离。' };
+    showResult({ scores:s, assessment:a });
+}
+
+function showResult(data) {
+    closeModal('submitModal');
+    const modal = document.getElementById('resultModal');
+    const s = data.scores, a = data.assessment;
+    const dims = [
+        {name:'工具本位(×1.5)',val:s.tool,weight:1.5}, 
+        {name:'本质主义(×1.5)',val:s.essence,weight:1.5}, 
+        {name:'模块化(×1.3)',val:s.modular,weight:1.3},
+        {name:'结果导向(×1.0)',val:s.result,weight:1.0}, 
+        {name:'迭代式(×1.0)',val:s.iterate,weight:1.0}, 
+        {name:'边界思维(×1.0)',val:s.boundary,weight:1.0}
+    ];
+    
+    const bonusDisplay = s.efficiencyBonus > 0 ? `<small style="color:var(--success)">（+${s.efficiencyBonus}高效探索加分）</small>` : '';
+
+    document.getElementById('resultModalBody').innerHTML = `
+        <div class="result-hero">
+            <div class="result-level ${a.gold?'gold':'normal'}">${a.level}</div>
+            <div class="result-tag">${a.tag}</div>
+            <div class="result-path">推荐路径：${a.path}</div>
+        </div>
+        <div class="total-score">加权总分 <span>${s.total}</span> / 14.6 ${bonusDisplay} ${s.penalty > 0 ? `<small style="color:var(--danger)">（扣${s.penalty}分）</small>` : ''}</div>
+        <div class="score-grid">${dims.map(d => `<div class="score-item"><div class="dim">${d.name}</div><div class="val ${d.val>=2?'high':d.val>=1?'mid':'low'}">${d.val}</div></div>`).join('')}</div>
+        <div class="comment-box"><i class="fas fa-robot" style="color:var(--accent-light);margin-right:.5rem;"></i>${a.comment}</div>
+        <div style="text-align:center;margin-top:1.5rem;">
+            <button class="action-btn primary" onclick="closeModal('resultModal')"><i class="fas fa-check"></i> 完成</button>
+        </div>`;
+    modal.classList.add('active');
+}
+
+// ========== SEND MESSAGE (SSE流式) ==========
+function sendMsg() {
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    addMsg('你', msg, 'user');
+    input.value = '';
+
+    // 显示打字指示器
+    const currentNpc = getCurrentNPC(S.location);
+    const npcName = currentNpc.name;
+    const typingId = 'typing-' + Date.now();
+    const typingEl = document.createElement('div');
+    typingEl.className = 'message npc';
+    typingEl.id = typingId;
+    typingEl.innerHTML = `
+        <div class="message-header">
+            <span class="name"><i class="fas ${currentNpc.icon}"></i> ${npcName}</span>
+            <span class="time">${getTime()}</span>
+        </div>
+        <div class="message-bubble"><span class="typing-indicator"><span></span><span></span><span></span></span></div>`;
+    document.getElementById('chatMessages').appendChild(typingEl);
+    scrollToBottom();
+
+    // 准备对话历史（简化格式）
+    const historyForAPI = (S.history[S.location] || []).slice(-6).map(h => ({
+        userInput: h.isUser ? h.text : '',
+        npcResponse: h.isUser ? '' : h.text
+    })).filter(h => h.userInput || h.npcResponse);
+
+    // SSE流式调用
+    streamNpcResponse(S.location, msg, npcName, typingId, historyForAPI);
+}
+
+function streamNpcResponse(location, userMsg, npcName, typingId, history) {
+    const chatBox = document.getElementById('chatMessages');
+
+    // 获取该地点已收集的线索
+    const collectedClues = S.clueFragments[location] || [];
+
+    fetch('/.netlify/functions/npc-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            message: userMsg,
+            location: location,
+            npcName: npcName,
+            conversationHistory: history,
+            detectedClues: collectedClues
+        })
+    }).then(res => {
+        if (!res.ok) throw new Error('API错误');
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let fullText = '';
+        let buffer = '';
+        let pendingClues = [];
+        let pendingCrossLink = false;
+
+        // 移除打字指示器
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) {
+            typingEl.innerHTML = `
+                <div class="message-header">
+                    <span class="name"><i class="fas ${NPC[location].icon}"></i> ${npcName}</span>
+                    <span class="time">${getTime()}</span>
+                </div>
+                <div class="message-bubble" id="${typingId}-content"></div>`;
+        }
+        const contentEl = document.getElementById(`${typingId}-content`);
+
+        function processText(text) {
+            // 解析 SSE 格式: data: {...}\n\n
+            buffer += text;
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(line.slice(6));
+                        if (data.content) {
+                            fullText += data.content;
+                            if (contentEl) {
+                                // 对累积文本进行术语注解
+                                contentEl.innerHTML = annotateTerms(fullText.replace(/\n/g, '<br>'));
+                                // 绑定新的术语点击事件
+                                contentEl.querySelectorAll('.term-anchor').forEach(anchor => {
+                                    anchor.addEventListener('click', (e) => {
+                                        e.stopPropagation();
+                                        showTermModal(anchor.dataset.term);
+                                    });
+                                });
+                            }
+                            scrollToBottom();
+                        } else if (data.full) {
+                            // 本地降级模式
+                            fullText = data.full;
+                            if (contentEl) {
+                                contentEl.innerHTML = annotateTerms(fullText.replace(/\n/g, '<br>'));
+                                contentEl.querySelectorAll('.term-anchor').forEach(anchor => {
+                                    anchor.addEventListener('click', (e) => {
+                                        e.stopPropagation();
+                                        showTermModal(anchor.dataset.term);
+                                    });
+                                });
+                            }
+                            scrollToBottom();
+                        } else if (data.clues) {
+                            // 收集线索碎片
+                            pendingClues = data.clues || [];
+                            // 提取跨线关联状态
+                            if (data.crossLinked !== undefined) {
+                                pendingCrossLink = data.crossLinked;
+                            }
+                        }
+                    } catch (e) {
+                        // 可能是不完整的JSON，忽略
+                    }
+                }
+            }
+        }
+
+        function read() {
+            reader.read().then(({ done, value }) => {
+                if (done) {
+                    if (!fullText && contentEl) {
+                        processText('\n');
+                    }
+                    saveNpcResponse(location, npcName, fullText);
+                    // 处理线索收集（只更新进度条，不再触发解锁）
+                    if (pendingClues.length > 0) {
+                        handleClueCollection(location, pendingClues);
+                    }
+                    // 处理跨线关联（触发解锁）
+                    if (pendingCrossLink) {
+                        handleCrossLink(location);
+                    }
+                    return;
+                }
+                processText(decoder.decode(value, { stream: true }));
+                read();
+            });
+        }
+
+        read();
+    }).catch(err => {
+        console.error('SSE错误，降级到本地回复:', err);
+        const typingEl = document.getElementById(typingId);
+        if (typingEl) typingEl.remove();
+        setTimeout(() => {
+            const response = findResponse(location, userMsg);
+            addMsg(npcName, response);
+        }, 600);
+    });
+}
+
+function saveNpcResponse(location, npcName, text) {
+    if (text) {
+        const histEntry = { npc: npcName, text: text, time: getTime(), isUser: false, isSystem: false };
+        if (!S.history[location]) S.history[location] = [];
+        S.history[location].push(histEntry);
+    }
+}
+
+// ========== 线索碎片收集系统 ==========
+// 初始化线索收集状态
+if (!S.clueFragments) {
+    S.clueFragments = {
+        shine: [],   // 烁星线索碎片
+        shadow: [],  // 影星线索碎片
+        obs: []      // 观测站线索碎片
+    };
+}
+
+const CLUE_THRESHOLD = 2; // 解锁下一地点需要的线索数量
+
+// 线索定义
+const CLUE_DEFS = {
+    shine: [
+        { id: 'pulsar_pattern', name: '47周期规律', icon: 'fa-wave-square' },
+        { id: 'temple_fail', name: '圣殿校准失败', icon: 'fa-church' },
+        { id: 'station_help', name: '观测站可能有帮助', icon: 'fa-satellite-dish' }
+    ],
+    shadow: [
+        { id: 'whisper_sync', name: '呢喃与杂音同步', icon: 'fa-sync' },
+        { id: 'singularity', name: '声学奇点存在', icon: 'fa-exclamation-triangle' },
+        { id: 'no_cancel', name: '无"抵消"概念', icon: 'fa-question-circle' }
+    ],
+    obs: [
+        { id: 'gravity_sync', name: '引力波与杂音同步', icon: 'fa-wave-square' },
+        { id: 'silence_source', name: '来源静默之渊', icon: 'fa-map-marker-alt' },
+        { id: 'prison_hypo', name: '引力牢笼假说', icon: 'fa-lock' }
+    ]
+};
+
+// 处理线索收集（只更新进度条，不再作为解锁条件）
+function handleClueCollection(location, newClues) {
+    if (!S.clueFragments[location]) {
+        S.clueFragments[location] = [];
+    }
+
+    let addedCount = 0;
+
+    // 添加新线索（去重）
+    for (const clueId of newClues) {
+        if (!S.clueFragments[location].includes(clueId)) {
+            S.clueFragments[location].push(clueId);
+            addedCount++;
+        }
+    }
+
+    if (addedCount > 0) {
+        // 更新UI
+        updateClueProgressUI(location);
+
+        // 显示线索收集提示
+        const clueDef = CLUE_DEFS[location]?.find(c => newClues.includes(c.id));
+        if (clueDef) {
+            showClueCollectedToast(clueDef);
+        }
+        // 注意：不再基于线索数量触发解锁，解锁条件改为跨线关联
+    }
+}
+
+// ========== 跨线关联系统 ==========
+// 处理跨线关联，触发解锁
+function handleCrossLink(location) {
+    // 检查是否已经触发过跨线关联
+    if (S.hasCrossLinked[location]) {
+        return; // 避免重复触发
+    }
+
+    S.hasCrossLinked[location] = true;
+
+    // 触发专属视觉效果
+    showCrossLinkEffect();
+
+    // 解锁下一地点
+    const unlockMap = {
+        shine: { stage: 2, name: '影星' },
+        shadow: { stage: 3, name: '观测站' },
+        obs: { stage: 4, name: '外部扫描' }
+    };
+
+    const unlock = unlockMap[location];
+    if (unlock) {
+        advanceStage(unlock.stage);
+        // 延迟显示赫尔消息，等视觉效果完成后
+        setTimeout(() => {
+            appendSystemMessage('赫尔：你开始把碎片拼起来了。继续。');
+        }, 800);
+    }
+}
+
+// 跨线关联成功视觉效果
+function showCrossLinkEffect() {
+    // 屏幕边缘泛起金色微光
+    document.body.classList.add('crosslink-glow');
+    setTimeout(() => document.body.classList.remove('crosslink-glow'), 2000);
+
+    // 位置列表中显示跨线关联成功提示
+    const item = document.querySelector(`.location-item[data-location="${S.location}"]`);
+    if (item) {
+        let hintEl = item.querySelector('.crosslink-hint');
+        if (!hintEl) {
+            hintEl = document.createElement('div');
+            hintEl.className = 'crosslink-hint';
+            item.querySelector('.location-info').appendChild(hintEl);
+        }
+        hintEl.innerHTML = '<i class="fas fa-link"></i> 已建立跨线关联';
+    }
+}
+
+// 追加系统消息（赫尔）
+function appendSystemMessage(text) {
+    const box = document.getElementById('chatMessages');
+    const el = document.createElement('div');
+    el.className = 'message system';
+    el.innerHTML = `
+        <div class="message-header">
+            <span class="name"><i class="fas fa-satellite-dish"></i> 赫尔</span>
+            <span class="time">${getTime()}</span>
+        </div>
+        <div class="message-bubble">${text}</div>`;
+    box.appendChild(el);
+    box.scrollTop = box.scrollHeight;
+
+    // 保存历史
+    if (!S.history[S.location]) S.history[S.location] = [];
+    S.history[S.location].push({ npc: '赫尔', text: text, time: getTime(), isSystem: true });
+}
+
+// 获取某地点的线索总数
+function getClueTotal(location) {
+    return CLUE_DEFS[location]?.length || 3;
+}
+
+// 更新线索进度UI
+function updateClueProgressUI(location) {
+    const item = document.querySelector(`.location-item[data-location="${location}"]`);
+    if (!item) return;
+
+    const clues = S.clueFragments[location] || [];
+    const count = clues.length;
+    const total = getClueTotal(location);
+
+    // 查找或创建进度元素
+    let progressEl = item.querySelector('.clue-progress');
+    if (!progressEl) {
+        progressEl = document.createElement('span');
+        progressEl.className = 'clue-progress';
+        item.querySelector('.location-info').appendChild(progressEl);
+    }
+
+    progressEl.textContent = `线索 ${count}/${total}`;
+    progressEl.style.color = count >= CLUE_THRESHOLD ? 'var(--success)' : 'var(--text-secondary)';
+
+    // 更新小圆点进度
+    updateClueDots(item, count, total);
+}
+
+// 更新小圆点
+function updateClueDots(item, count, total) {
+    let dotsContainer = item.querySelector('.clue-dots');
+    if (!dotsContainer) {
+        dotsContainer = document.createElement('div');
+        dotsContainer.className = 'clue-dots';
+        item.querySelector('.location-info').appendChild(dotsContainer);
+    }
+
+    dotsContainer.innerHTML = Array(total).fill(0).map((_, i) =>
+        `<span class="clue-dot ${i < count ? 'filled' : ''}"></span>`
+    ).join('');
+}
+
+// 显示线索收集提示
+function showClueCollectedToast(clueDef) {
+    showToast(`📍 线索碎片：${clueDef.name}`);
+}
+
+// 地点解锁时调用
+function onLocationUnlocked(currentLoc) {
+    const unlockMap = {
+        shine: { next: 'shadow', stage: 2, name: '影星' },
+        shadow: { next: 'obs', stage: 3, name: '观测站' },
+        obs: { next: 'scan', stage: 4, name: '外部扫描' }
+    };
+
+    const unlock = unlockMap[currentLoc];
+    if (unlock) {
+        // 播放解锁动画
+        playUnlockEffect();
+        advanceStage(unlock.stage);
+        showToast(`🎉 收集了足够线索！<br>🔓 ${unlock.name}区域已解锁！`);
+    }
+}
+
+// 解锁动画效果
+function playUnlockEffect() {
+    // 屏幕边缘泛光
+    const glow = document.createElement('div');
+    glow.className = 'unlock-glow';
+    document.body.appendChild(glow);
+    setTimeout(() => glow.remove(), 1500);
+}
+
+function scrollToBottom() {
+    const box = document.getElementById('chatMessages');
+    box.scrollTop = box.scrollHeight;
+}
+
+// ========== INIT ==========
+document.addEventListener('DOMContentLoaded', function() {
+    setInterval(updateTimer, 1000);
+    initPulse();
+    initMusic();
+    initIntro();
+    updateLocationLocks();
+    updateActionButtons();
+
+    // 引导页按钮事件绑定
+    document.getElementById('introNextBtn1')?.addEventListener('click', nextIntroPage);
+    document.getElementById('introNextBtn2')?.addEventListener('click', nextIntroPage);
+    document.getElementById('introStartBtn')?.addEventListener('click', startGame);
+
+    // 位置切换
+    document.querySelectorAll('.location-item').forEach(el => {
+        el.addEventListener('click', () => {
+            if (!el.classList.contains('locked')) switchLoc(el.dataset.location);
+        });
+    });
+
+    // 发送消息
+    document.getElementById('sendBtn').addEventListener('click', sendMsg);
+    document.getElementById('chatInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+    });
+
+    // 提示按钮
+    document.getElementById('hintBtn').addEventListener('click', () => {
+        const hints = {
+            shine:['问问奥拉关于圣殿的事','47周期和3周期的关系','奥拉很担忧同胞'],
+            shadow:['声学奇点是什么','阿库对比过观测站数据','进入奇点意味着归寂'],
+            obs:['引力波指向静默之渊','加密档案与引力牢笼假说有关','赫尔权限有限'],
+            scan:['多次扫描可能发现隐藏物体','深度扫描能获得更多信息','太空环境复杂'],
+            moss:['MOSS的SOS是101111二进制','150年无人修复','47周期是意识体挣扎']
+        };
+        
+        // 根据主线进度决定是否显示未解锁线索的乱码版本
+        const locHints = hints[S.location] || hints.shine;
+        let hint = locHints[Math.floor(Math.random()*locHints.length)];
+        
+        // 检查是否需要添加乱码
+        const progress = S.clues.size;
+        const hasMOSS = S.moss.contacted;
+        
+        // 未解锁的深层线索用乱码掩盖
+        const lockedHints = {
+            shine:['▓▒░█47周期的真相█▒▓','░▓▒与影星信号的关联█▓░','▓░▒静默深渊的秘密▒▓░'],
+            shadow:['▒░▓呢喃的真正源头█░▒','░▓▒海沟深处的秘密█▒░','▓▒░引力波与杂音同步▒▓░'],
+            obs:['░▒▓引力牢笼假说▓▒░','▓░▒静默之渊的坐标█░▓','░▓█▒赫尔隐瞒的真相█▓░'],
+            scan:['▒▓░发现残骸天线▓▒░','░▓▒▓▓量子AI碎片▓▒▓░','▓░▒MOSS-07编号▒░▓']
+        };
+        const locLockedHints = lockedHints[S.location] || lockedHints.shine;
+        
+        // 根据进度决定显示哪个版本
+        if (S.moss.invasionComplete && S.moss.invasionAllowed) {
+            // MOSS接管后，全部显示真相
+            hint = locLockedHints[Math.floor(Math.random()*locLockedHints.length)].replace(/[░▓▒█]/g, '');
+        } else if (progress < 2) {
+            // 进度低，大部分线索加乱码
+            if (Math.random() > 0.5) {
+                hint = '▓░▒▓' + hint + '▓▒░▓';
+            }
+        } else if (progress < 4) {
+            // 中等进度，部分乱码
+            const lockedHint = locLockedHints[Math.floor(Math.random()*locLockedHints.length)];
+            if (Math.random() > 0.6) {
+                hint = lockedHint;
+            }
+        }
+        // 进度高则正常显示
+        
+        addMsg(getCurrentNPC(S.location).name || '系统', `方向提示：${hint}`);
+    });
+
+    // 清空按钮
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        if (!confirm(`确定要清空${getCurrentNPC(S.location).name}的对话记录吗？`)) return;
+        S.history[S.location] = [];
+        loadChatHistory();
+    });
+
+    // 扫描按钮
+    document.getElementById('scanBtn').addEventListener('click', performScan);
+
+    document.getElementById('muteBtn').addEventListener('click', toggleMute);
+
+    // 模态框背景点击关闭
+    document.querySelectorAll('.modal').forEach(m => {
+        m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
+    });
+
+    // 术语弹窗事件监听
+    document.getElementById('termModal').addEventListener('click', e => {
+        if (e.target === document.getElementById('termModal')) closeTermModal();
+    });
+    document.getElementById('termCloseBtn').addEventListener('click', closeTermModal);
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeTermModal();
+    });
+
+    // 调试按钮逻辑
+    const debugBtn = document.getElementById('debugBtn');
+    const debugPanel = document.getElementById('debugPanel');
+
+    if (debugBtn && debugPanel) {
+        debugBtn.addEventListener('click', () => {
+            debugPanel.classList.toggle('active');
+        });
+    }
+
+    // qk口令：聊天输入框输入qk直接打开调试面板
+    document.getElementById('chatInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            const val = document.getElementById('chatInput').value.trim().toLowerCase();
+            if (val === 'qk') {
+                e.preventDefault();
+                if (debugPanel) debugPanel.classList.toggle('active');
+                document.getElementById('chatInput').value = '';
+                return;
+            }
+        }
+    });
+
+    updateProgress();
+    updateEggUI();
+});
+
+// 预设进度加载（全局函数）
+window.loadDebugPreset = function(name) {
+    // 隐藏introOverlay
+    var intro = document.getElementById('introOverlay');
+    if (intro) { intro.style.display = 'none'; intro.style.zIndex = '-1'; }
+
+    const presets = {
+        'fresh': { clues: [], history: [], location: 'shine', stage: 0 },
+        'shine-intro': {
+            clues: ['shine_intro'],
+            history: [{ userInput: '你是谁？', npcResponse: '我是奥拉。我的同胞正在失声——失去与群体网络的连接。星核的脉冲出现杂音后，一切就开始了。' }],
+            location: 'shine', stage: 1
+        },
+        'pulsar-known': {
+            clues: ['shine_intro', 'pulsar_pattern', 'temple_fail'],
+            history: [
+                { userInput: '你是谁？', npcResponse: '我是奥拉。我的同胞正在失声——失去与群体网络的连接。星核的脉冲出现杂音后，一切就开始了。' },
+                { userInput: '杂音有什么规律？', npcResponse: '每隔约47个脉冲周期出现一次，持续约3个周期。我们的圣殿校准失败了。' }
+            ],
+            location: 'shine', stage: 2
+        },
+        'shadow-intro': {
+            clues: ['shadow_intro'],
+            history: [{ userInput: '你是谁？', npcResponse: '我是阿库。深海出现了一种规律的呢喃，与星核杂音同步。它让幼体迷失方向。' }],
+            location: 'shadow', stage: 1
+        },
+        'obs-intro': {
+            clues: ['obs_intro'],
+            history: [{ userInput: '你是谁？', npcResponse: '我是DSO-7的AI系统，代号"赫尔"。功能：数据分析、档案检索、模式识别。' }],
+            location: 'obs', stage: 1
+        },
+        'full-progress': {
+            clues: ['shine_intro', 'pulsar_pattern', 'temple_fail', 'shadow_intro', 'whisper_sync', 'obs_intro', 'gravity_sync', 'moss_mentioned'],
+            history: [], location: 'obs', stage: 4
+        }
+    };
+
+    const preset = presets[name];
+    if (!preset) return;
+
+    S.clues = new Set(preset.clues);
+    S.history = [...preset.history];
+    S.location = preset.location;
+    S.stage = preset.stage;
+
+    try {
+        localStorage.setItem('starcore_state', JSON.stringify({
+            clues: [...S.clues], history: S.history, location: S.location, stage: S.stage
+        }));
+    } catch(e) {}
+
+    document.querySelectorAll('.scene-bg').forEach(bg => bg.classList.remove('active'));
+    const bg = document.getElementById('bg-' + S.location);
+    if (bg) bg.classList.add('active');
+    const npcNameEl = document.getElementById('npcName');
+    const currentNPC = getCurrentNPC(S.location);
+    if (npcNameEl) npcNameEl.textContent = currentNPC.name || '???';
+    const locEl = document.getElementById('locationDisplay');
+    if (locEl) locEl.textContent = { shine:'烁星', shadow:'影星', obs:'观测站', scan:'外部扫描', moss:'MOSS核心' }[S.location] || S.location;
+
+    const chatMessages = document.getElementById('chatMessages');
+    if (chatMessages) chatMessages.innerHTML = '';
+    S.history.forEach(h => {
+        if (h.userInput) addMsg('你', h.userInput, 'user');
+        if (h.npcResponse) addMsg(currentNPC.name, h.npcResponse, 'npc');
+    });
+
+    updateProgress();
+    updateLocationLocks();
+    
+    // 更新NPC显示
+    updateNPCDisplay(currentNPC);
+    document.getElementById('infoPanelContent').innerHTML = `<div style="padding:.8rem 1rem; font-size:.85rem; color:var(--text-secondary); line-height:1.6;">${currentNPC.info}</div>`;
+
+    // 更新扫描按钮显示（MOSS接管后隐藏）
+    const scanBtn = document.getElementById('scanBtn');
+    if (scanBtn) {
+        scanBtn.style.display = (S.location === 'obs' || S.location === 'scan') && !(S.moss.invasionComplete && S.moss.invasionAllowed) ? 'flex' : 'none';
+    }
+
+    document.getElementById('debugPanel').style.display = 'none';
+    showToast('进度已加载: ' + name);
+};
+</script>
+
+<!-- 调试按钮（默认隐藏） -->
+<button class="debug-btn" id="debugBtn" title="实验面板（10秒内连点10次）" onclick="handleDebugClick()" style="display:none;">
+    <i class="fas fa-flask"></i>
+</button>
+<script>
+let debugClickCount = 0;
+let debugClickTimer = null;
+let debugPanelShown = false;
+
+function handleDebugClick() {
+    // 隐藏intro
+    var intro = document.getElementById('introOverlay');
+    if (intro) { intro.style.display = 'none'; intro.style.zIndex = '-1'; }
+    
+    debugClickCount++;
+    
+    if (debugClickCount >= 10) {
+        // 成功解锁
+        clearTimeout(debugClickTimer);
+        debugClickCount = 0;
+        var p = document.getElementById('debugPanel');
+        if (p) { p.style.display = 'block'; p.style.zIndex = '9999'; }
+        debugPanelShown = true;
+        return;
+    }
+    
+    // 更新提示
+    var btn = document.getElementById('debugBtn');
+    if (btn) {
+        btn.title = '实验面板 (' + debugClickCount + '/10)';
+    }
+    
+    // 如果已有提示框，更新它
+    var existingTip = document.getElementById('debugTip');
+    if (existingTip) {
+        existingTip.innerHTML = '<i class="fas fa-keyboard"></i> 连点中... ' + debugClickCount + '/10';
+    } else {
+        // 创建提示框
+        var tip = document.createElement('div');
+        tip.id = 'debugTip';
+        tip.style.cssText = 'position:fixed;bottom:80px;right:20px;background:rgba(139,92,246,.9);color:white;padding:12px 20px;border-radius:10px;font-size:14px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);';
+        tip.innerHTML = '<i class="fas fa-keyboard"></i> 连点中... ' + debugClickCount + '/10';
+        document.body.appendChild(tip);
+    }
+    
+    // 重置计时器
+    clearTimeout(debugClickTimer);
+    debugClickTimer = setTimeout(function() {
+        // 超时，重置
+        debugClickCount = 0;
+        var tip = document.getElementById('debugTip');
+        if (tip) tip.remove();
+        var btn = document.getElementById('debugBtn');
+        if (btn) btn.title = '实验面板（10秒内连点10次）';
+    }, 10000);
+}
+</script>
+<div class="debug-panel" id="debugPanel">
+    <h4><i class="fas fa-bug"></i> 测试进度预设</h4>
+    <button class="debug-preset" onclick="loadDebugPreset('fresh')">
+        纯净开局
+        <small>无任何线索，从头开始</small>
+    </button>
+    <button class="debug-preset" onclick="loadDebugPreset('shine-intro')">
+        烁星-已介绍
+        <small>奥拉已自我介绍，获得shine_intro</small>
+    </button>
+    <button class="debug-preset" onclick="loadDebugPreset('pulsar-known')">
+        烁星-已知规律
+        <small>已知杂音周期规律（需前置）</small>
+    </button>
+    <button class="debug-preset" onclick="loadDebugPreset('shadow-intro')">
+        影星-已介绍
+        <small>阿库已自我介绍，获得shadow_intro</small>
+    </button>
+    <button class="debug-preset" onclick="loadDebugPreset('obs-intro')">
+        观测站-已介绍
+        <small>赫尔已自我介绍，获得obs_intro</small>
+    </button>
+    <button class="debug-preset" onclick="loadDebugPreset('full-progress')">
+        全线进度
+        <small>三线intro + 部分核心线索</small>
+    </button>
+</div>
+</body>
+</html>
