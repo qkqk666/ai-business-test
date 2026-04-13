@@ -1,38 +1,15 @@
 [build]
   publish = "."
-  functions = "netlify/functions"
-
-[build.environment]
-  NODE_VERSION = "18"
 
 [functions]
+  directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# ========== 双轨架构超时配置 ==========
-# 轨道一：NPC 对话 SSE 流式（10s 内发出首字节，后续传输不受限）
-[functions."npc-chat"]
-  timeout = 10
+[functions."ask-npc"]
+  node_bundler = "esbuild"
 
-# MOSS 揭示真相 SSE 流式
-[functions."moss-reveal"]
-  timeout = 10
-
-# 轨道二：AI 深度评分（需要更长时间完成分析）
 [functions."score-background"]
-  timeout = 26
+  node_bundler = "esbuild"
 
-# 状态查询（极快，仅读取缓存）
 [functions."check-status"]
-  timeout = 5
-
-# 传统测评 AI 评分
-[functions."calculate"]
-  timeout = 26
-
-# ========== 安全请求头 ==========
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
+  node_bundler = "esbuild"
