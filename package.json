@@ -4,5 +4,8 @@
   "description": "AI人才评估系统 - 传统测评 + 星核纪元",
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0"
   }
 }
