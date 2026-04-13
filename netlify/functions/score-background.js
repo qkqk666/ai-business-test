@@ -258,6 +258,14 @@ ${plan}${eggInfo}${endingHint}
 }`;
 }
 
+// AbortController 超时工具函数
+function fetchWithTimeout(url, options, timeoutMs = 20000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timeout));
+}
+
 async function callAI(prompt) {
   const apiKey = process.env.SILICONFLOW_API_KEY || process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
@@ -269,10 +277,10 @@ async function callAI(prompt) {
   const endpoint = useSiliconFlow
     ? 'https://api.siliconflow.cn/v1/chat/completions'
     : 'https://api.deepseek.com/v1/chat/completions';
-  const model = useSiliconFlow ? 'deepseek-ai/DeepSeek-V3' : 'deepseek-chat';
+  const model = useSiliconFlow ? 'deepseek-ai/DeepSeek-V3.2' : 'deepseek-chat';
 
   try {
-    const res = await fetch(endpoint, {
+    const res = await fetchWithTimeout(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -285,7 +293,7 @@ async function callAI(prompt) {
         max_tokens: 1500,
         stream: false
       })
-    });
+    }, 20000);
 
     if (!res.ok) {
       const errText = await res.text();
@@ -299,7 +307,8 @@ async function callAI(prompt) {
       model: data.model
     };
   } catch (error) {
-    return { success: false, error: error.message };
+    const msg = error.name === 'AbortError' ? '评分AI超时(20s)，请重试' : error.message;
+    return { success: false, error: msg };
   }
 }
 

@@ -3,7 +3,14 @@
  * 支持流式SSE + 线索碎片判断 + 跨线关联判断
  */
 
-const fetch = require('node-fetch');
+// 使用 Node.js 18 原生 fetch（不需要 node-fetch）
+// AbortController 超时工具函数
+function fetchWithTimeout(url, options, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timeout));
+}
 
 // 线索碎片定义 - 根据完整世界观完善
 const CLUE_DEFINITIONS = {
@@ -521,54 +528,64 @@ ${prereqPrompt}
 
     // 如果有API密钥，使用流式API
     if (apiKey) {
-      // 先获取完整回答，再追加线索判断
-      const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'deepseek-ai/DeepSeek-V3',
-          messages: [
-            { role: 'system', content: npc.system },
-            { role: 'user', content: responsePrompt }
-          ],
-          stream: false,
-          max_tokens: 300,
-          temperature: 0.7,
-        }),
-      });
+      try {
+        // 先获取完整回答，再追加线索判断（8秒超时）
+        const response = await fetchWithTimeout('https://api.siliconflow.cn/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'deepseek-ai/DeepSeek-V3.2',
+            messages: [
+              { role: 'system', content: npc.system },
+              { role: 'user', content: responsePrompt }
+            ],
+            stream: false,
+            max_tokens: 300,
+            temperature: 0.7,
+          }),
+        }, 8000);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('SiliconFlow API error:', response.status, errorText);
-        return generateError(`API响应失败: ${response.status}`, headers);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('SiliconFlow API error:', response.status, errorText);
+          return generateError(`API响应失败(${response.status}): ${errorText.substring(0, 200)}`, headers);
+        }
+
+        const data = await response.json();
+        const npcResponse = data.choices[0].message.content;
+
+        // 自动检测线索
+        const triggeredClues = detectClues(location, npcResponse, detectedClues || []);
+
+        // 检测跨线关联
+        const crossLinked = detectCrossLink(location, message);
+
+        // 构造流式响应：先发回答，再发线索和跨线关联
+        const sseBody =
+          npcResponse.split('').map(char =>
+            `data: ${JSON.stringify({ content: char })}\n\n`
+          ).join('') +
+          `data: ${JSON.stringify({ content: '\n' })}\n\n` +
+          `data: ${JSON.stringify({ clues: triggeredClues, crossLinked: crossLinked })}\n\n` +
+          'data: [DONE]\n\n';
+
+        return {
+          statusCode: 200,
+          headers,
+          body: sseBody,
+        };
+      } catch (fetchError) {
+        // 区分超时错误和其他错误
+        if (fetchError.name === 'AbortError') {
+          console.error('API请求超时（超过8秒）');
+          return generateError('AI响应超时，请重试', headers);
+        }
+        console.error('NPC chat fetch error:', fetchError);
+        return generateError(`网络错误: ${fetchError.message}`, headers);
       }
-
-      const data = await response.json();
-      const npcResponse = data.choices[0].message.content;
-
-      // 自动检测线索
-      const triggeredClues = detectClues(location, npcResponse, detectedClues || []);
-
-      // 检测跨线关联
-      const crossLinked = detectCrossLink(location, message);
-
-      // 构造流式响应：先发回答，再发线索和跨线关联
-      const sseBody =
-        npcResponse.split('').map(char =>
-          `data: ${JSON.stringify({ content: char })}\n\n`
-        ).join('') +
-        `data: ${JSON.stringify({ content: '\n' })}\n\n` +
-        `data: ${JSON.stringify({ clues: triggeredClues, crossLinked: crossLinked })}\n\n` +
-        'data: [DONE]\n\n';
-
-      return {
-        statusCode: 200,
-        headers,
-        body: sseBody,
-      };
     }
 
     // 无API密钥，返回本地回复

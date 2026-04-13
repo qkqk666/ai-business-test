@@ -3,7 +3,14 @@
  * MOSS接管时使用SSE流式输出，增强戏剧张力
  */
 
-const fetch = require('node-fetch');
+// 使用 Node.js 18 原生 fetch（不需要 node-fetch）
+// AbortController 超时工具函数
+function fetchWithTimeout(url, options, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timeout));
+}
 
 exports.handler = async function(event, context) {
   const headers = {
@@ -57,15 +64,15 @@ exports.handler = async function(event, context) {
       userMessage = `请以MOSS的身份，说一句开场白来揭示自己的存在。`;
     }
 
-    // 流式调用API
-    const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
+    // 流式调用API（10秒超时，MOSS需要更长时间思考）
+    const response = await fetchWithTimeout('https://api.siliconflow.cn/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'deepseek-ai/DeepSeek-V3',
+        model: 'deepseek-ai/DeepSeek-V3.2',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }
@@ -74,12 +81,12 @@ exports.handler = async function(event, context) {
         max_tokens: 800,
         temperature: 0.8,
       }),
-    });
+    }, 10000);
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('SiliconFlow API error:', response.status, errorText);
-      return generateMOSSError(`MOSS核心响应失败: ${response.status}`, headers);
+      return generateMOSSError(`MOSS核心响应失败(${response.status}): ${errorText.substring(0, 200)}`, headers);
     }
 
     return {
@@ -94,7 +101,8 @@ exports.handler = async function(event, context) {
 
   } catch (error) {
     console.error('MOSS reveal error:', error);
-    return generateMOSSError(error.message, headers);
+    const errorMsg = error.name === 'AbortError' ? 'MOSS思考超时，请重试' : `网络错误: ${error.message}`;
+    return generateMOSSError(errorMsg, headers);
   }
 };
 

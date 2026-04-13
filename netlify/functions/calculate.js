@@ -27,7 +27,7 @@ function callAI(systemPrompt, userPrompt) {
     if (!apiKey) { reject(new Error('MISSING_API_KEY')); return; }
 
     var postData = JSON.stringify({
-      model: 'deepseek-ai/DeepSeek-V3',
+      model: 'deepseek-ai/DeepSeek-V3.2',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: userPrompt }
