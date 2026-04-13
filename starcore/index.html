@@ -4730,8 +4730,9 @@ function viewData() {
 let soundArrival, soundTheme;
 
 function initMusic() {
-    soundArrival = new Howl({ src:['https://assets.mixkit.co/music/preview/mixkit-deep-space-1199.mp3'], volume:S.music.volume || 0.2, loop:true });
-    soundTheme = new Howl({ src:['https://assets.mixkit.co/music/preview/mixkit-sad-cello-113.mp3'], volume:0, loop:true });
+    // 使用免费音乐CDN（Pixabay）
+    soundArrival = new Howl({ src:['https://cdn.pixabay.com/audio/2022/10/25/audio_d8c6a09302.mp3'], volume:S.music.volume || 0.2, loop:true });
+    soundTheme = new Howl({ src:['https://cdn.pixabay.com/audio/2024/02/14/audio_5d1a5f9c9f.mp3'], volume:0, loop:true });
 
     // 同步音量滑块
     const volSlider = document.getElementById('volumeSlider');
