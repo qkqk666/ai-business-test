@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>浮空岛·回响</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --bg: #0b0e14;
+      --accent: #2dd4bf;
+      --text: #e2e8f0;
+      --subtext: #94a3b8;
+      --border: #334155;
+      --card: #1e293b;
+      --danger: #ef4444;
+    }
+    
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+    
+    /* Header */
+    .header {
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(10px);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .logo {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    
+    .stage-badge {
+      background: var(--accent);
+      color: var(--bg);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    /* Main Container */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px;
+      padding-bottom: 120px;
+    }
+    
+    /* Steps */
+    .steps {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 32px;
+      position: relative;
+    }
+    
+    .steps::before {
+      content: '';
+      position: absolute;
+      top: 15px;
+      left: 40px;
+      right: 40px;
+      height: 2px;
+      background: var(--border);
+    }
+    
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      z-index: 1;
+    }
+    
+    .step-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--card);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    
+    .step.active .step-circle {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--bg);
+    }
+    
+    .step.completed .step-circle {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    
+    .step-label {
+      font-size: 12px;
+      color: var(--subtext);
+    }
+    
+    .step.active .step-label {
+      color: var(--accent);
+    }
+    
+    /* Scene Card */
+    .scene-card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+    }
+    
+    .scene-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+    
+    .scene-desc {
+      color: var(--subtext);
+      margin-bottom: 20px;
+    }
+    
+    /* Buttons */
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 14px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 15px;
+      transition: all 0.2s;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .btn:hover:not(:disabled) {
+      background: var(--accent);
+      color: var(--bg);
+      border-color: var(--accent);
+    }
+    
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+      border-color: var(--accent);
+      text-align: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      filter: brightness(1.1);
+    }
+    
+    /* Clues */
+    .clues-section {
+      margin-top: 24px;
+    }
+    
+    .clues-title {
+      font-size: 14px;
+      color: var(--subtext);
+      margin-bottom: 12px;
+    }
+    
+    .clues-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .clue-card {
+      background: rgba(45, 212, 191, 0.1);
+      border: 1px solid rgba(45, 212, 191, 0.3);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    
+    /* Fixed Bottom */
+    .fixed-bottom {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      padding: 16px 24px;
+    }
+    
+    .bottom-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    /* Question Mode */
+    .question-box {
+      background: rgba(45, 212, 191, 0.1);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .question-text {
+      font-size: 15px;
+      margin-bottom: 12px;
+    }
+    
+    .char-count {
+      font-size: 12px;
+      color: var(--subtext);
+      text-align: right;
+      margin-bottom: 8px;
+    }
+    
+    .char-count.valid {
+      color: var(--accent);
+    }
+    
+    textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      color: var(--text);
+      font-size: 14px;
+      resize: vertical;
+      min-height: 100px;
+      font-family: inherit;
+    }
+    
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    
+    /* Compliance Page */
+    .compliance-card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 32px;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+    
+    .compliance-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    
+    .compliance-title {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    
+    .compliance-desc {
+      color: var(--subtext);
+      margin-bottom: 24px;
+      text-align: left;
+    }
+    
+    .compliance-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+      text-align: left;
+    }
+    
+    .checkbox-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    
+    .checkbox-wrapper input {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--accent);
+    }
+    
+    /* Loading */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(11, 14, 20, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    
+    .loading-spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+      margin-top: 16px;
+      color: var(--subtext);
+    }
+    
+    /* Result Page */
+    .result-card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 32px;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+    
+    .result-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+    
+    .result-type {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #2dd4bf, #a78bfa, #f472b6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    
+    .result-trait {
+      display: inline-block;
+      background: rgba(45, 212, 191, 0.2);
+      color: var(--accent);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+    
+    .result-desc {
+      color: var(--subtext);
+      font-size: 15px;
+      line-height: 1.8;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+    
+    /* Radar Chart */
+    .radar-section {
+      margin: 24px 0;
+    }
+    
+    .radar-title {
+      font-size: 14px;
+      color: var(--subtext);
+      margin-bottom: 16px;
+    }
+    
+    .radar-chart {
+      max-width: 300px;
+      margin: 0 auto;
+    }
+    
+    /* Bars */
+    .bars-section {
+      margin: 24px 0;
+    }
+    
+    .bar-item {
+      margin-bottom: 12px;
+    }
+    
+    .bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    
+    .bar-track {
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #a78bfa);
+      border-radius: 4px;
+      transition: width 1s ease-out;
+    }
+    
+    /* Restart Button */
+    .restart-btn {
+      margin-top: 24px;
+      padding: 14px 32px;
+      background: transparent;
+      border: 2px solid var(--accent);
+      color: var(--accent);
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .restart-btn:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    
+    /* Dialogue Overlay */
+    .dialogue-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(11, 14, 20, 0.9);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 1000;
+      padding: 24px;
+    }
+    
+    .dialogue-box {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 600px;
+      width: 100%;
+      border: 1px solid var(--border);
+    }
+    
+    .dialogue-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .dialogue-name {
+      font-weight: 600;
+      color: var(--accent);
+    }
+    
+    .dialogue-close {
+      background: none;
+      border: none;
+      color: var(--subtext);
+      font-size: 24px;
+      cursor: pointer;
+    }
+    
+    .dialogue-messages {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-bottom: 16px;
+    }
+    
+    .dialogue-msg {
+      padding: 12px 16px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+    
+    .dialogue-msg.npc {
+      background: rgba(45, 212, 191, 0.1);
+      border: 1px solid rgba(45, 212, 191, 0.3);
+    }
+    
+    .dialogue-msg.user {
+      background: var(--accent);
+      color: var(--bg);
+      margin-left: 24px;
+    }
+    
+    .dialogue-input-group {
+      display: flex;
+      gap: 12px;
+    }
+    
+    .dialogue-input {
+      flex: 1;
+      padding: 12px 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+    }
+    
+    .dialogue-send {
+      padding: 12px 20px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: var(--bg);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    
+    /* Hide elements */
+    .hidden {
+      display: none !important;
+    }
+    
+    /* Review Button */
+    .review-btn {
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--subtext);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    
+    .review-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    
+    /* Clue Review Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(11, 14, 20, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 24px;
+    }
+    
+    .modal-box {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 500px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--subtext);
+      font-size: 24px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  
+  <script>
+    // ==================== State ====================
+    const state = {
+      phase: 'compliance', // compliance, explore, result
+      stage: 0, // 0-4
+      clues: [],
+      answers: { answer1: '', answer2: '', answer3: '', answer4: '', critique: '', final: '' },
+      dialogueMessages: [],
+      isFirstDialogue: true,
+      dialogueRetryCount: 0,
+      preDiscovery: false,
+      reviewCount: 0,
+      questionCount: 0,
+      currentQuestion: null,
+      loading: false,
+      result: null,
+      dialogueOpen: false
+    };
+    
+    // ==================== Scenes ====================
+    const scenes = {
+      0: {
+        title: '水源树区域',
+        desc: '你来到浮空岛的中央，看到了一棵巨大的古树。树干粗壮，树冠笼罩着整片天空。但你注意到……有什么不对劲。',
+        area: '观察期'
+      },
+      1: {
+        title: '迷雾林',
+        desc: '穿过一片薄雾，你来到了迷雾林。雾气比村民描述的更浓，几乎看不清前方。但你隐约看到了一个身影——守林人，似乎在等待着什么。',
+        area: '深入期'
+      },
+      2: {
+        title: '水源树·共鸣测试',
+        desc: '你回到了水源树旁，取出了共鸣石。这是一块能够感知「共振频率」的古老矿石。',
+        area: '验证期'
+      },
+      3: {
+        title: '反例测试',
+        desc: '在提交最终方案之前，系统向你展示了一个不同的观点。',
+        area: '反例测试'
+      },
+      4: {
+        title: '最终方案',
+        desc: '综合你收集的所有线索和思考，现在请给出你的最终判断。',
+        area: '完成'
+      }
+    };
+    
+    const questions = {
+      answer1: {
+        text: '你注意到树叶上有灰色粉末，树干有裂纹，村民提到了嗡鸣声。你认为水源树出水量减少的最可能原因是什么？',
+        minChars: 20
+      },
+      answer2: {
+        text: '守林人说「树根碰到了不该碰的东西」，然后不再开口。这句话让你联想到了什么？水源树和迷雾林可能是什么关系？',
+        minChars: 30
+      },
+      answer3: {
+        text: '为什么特定的节奏能让树叶暂时恢复？这暗示了水源树的什么本质？',
+        minChars: 30
+      },
+      answer4: {
+        text: '岛志记录了水源树、迷雾林同时出现，以及150年前波动后自愈。结合共鸣石节奏，你认为这三者之间是什么关系？水源树到底是什么？',
+        minChars: 40
+      }
+    };
+    
+    // ==================== Render ====================
+    function render() {
+      const app = document.getElementById('app');
+      
+      if (state.loading) {
+        app.innerHTML = `
+          <div class="loading-overlay">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">${state.loadingText || '加载中...'}</div>
+          </div>
+        `;
+        return;
+      }
+      
+      if (state.result) {
+        app.innerHTML = renderResult();
+        setTimeout(drawRadarChart, 100);
+        return;
+      }
+      
+      if (state.phase === 'compliance') {
+        app.innerHTML = renderCompliance();
+        return;
+      }
+      
+      app.innerHTML = `
+        ${renderHeader()}
+        <div class="container">
+          ${renderSteps()}
+          ${renderScene()}
+        </div>
+        ${renderBottom()}
+        ${state.dialogueOpen ? renderDialogue() : ''}
+        ${state.reviewModal ? renderClueReviewModal() : ''}
+      `;
+      
+      attachEventListeners();
+    }
+    
+    function renderHeader() {
+      const scene = scenes[state.stage];
+      return `
+        <header class="header">
+          <div class="logo">浮空岛·回响</div>
+          <div class="stage-badge">${scene.area}</div>
+        </header>
+      `;
+    }
+    
+    function renderSteps() {
+      const stepNames = ['观察', '深入', '验证', '反例', '完成'];
+      return `
+        <div class="steps">
+          ${stepNames.map((name, i) => `
+            <div class="step ${i < state.stage ? 'completed' : ''} ${i === state.stage ? 'active' : ''}">
+              <div class="step-circle">${i < state.stage ? '✓' : i + 1}</div>
+              <div class="step-label">${name}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+    
+    function renderScene() {
+      const scene = scenes[state.stage];
+      return `
+        <div class="scene-card">
+          <h2 class="scene-title">${scene.title}</h2>
+          <p class="scene-desc">${scene.desc}</p>
+          <div class="btn-group" id="explore-buttons">
+            ${renderExploreButtons()}
+          </div>
+        </div>
+        ${state.clues.length > 0 ? renderClues() : ''}
+      `;
+    }
+    
+    function renderExploreButtons() {
+      const stage = state.stage;
+      
+      if (stage === 0) {
+        return `
+          <button class="btn" onclick="explore('leaf')" id="btn-leaf">🌿 观察树叶</button>
+          <button class="btn" onclick="explore('trunk')" id="btn-trunk">🌳 观察树干</button>
+          <button class="btn" onclick="explore('root')" id="btn-root">🌱 观察树根</button>
+          <button class="btn" onclick="explore('villager')" id="btn-villager">👥 询问村民</button>
+          <button class="btn btn-primary" onclick="continueExplore()" id="btn-continue" ${state.clues.length < 4 ? 'disabled' : ''}>
+            继续探索 →
+          </button>
+        `;
+      }
+      
+      if (stage === 1) {
+        return `
+          <button class="btn" onclick="startDialogue()">👤 与守林人对话</button>
+          <button class="btn" onclick="explore('mist')" id="btn-mist">🌫️ 观察迷雾</button>
+          <button class="btn btn-primary" onclick="continueExplore()" id="btn-continue" ${!canContinueStage1() ? 'disabled' : ''}>
+            继续探索 →
+          </button>
+        `;
+      }
+      
+      if (stage === 2) {
+        return `
+          <button class="btn" onclick="explore('knock')" id="btn-knock">🔨 用共鸣石敲击树干</button>
+          <button class="btn" onclick="explore('rhythm')" id="btn-rhythm">🎵 尝试不同节奏</button>
+        `;
+      }
+      
+      return '';
+    }
+    
+    function canContinueStage1() {
+      // 需要对话后且迷雾已观察
+      const hasDialogue = state.clues.some(c => c.id === 'dialogue');
+      const hasMist = state.clues.some(c => c.id === 'mist');
+      return hasDialogue && hasMist;
+    }
+    
+    function renderClues() {
+      return `
+        <div class="clues-section">
+          <div class="clues-title">已发现的线索</div>
+          <div class="clues-list">
+            ${state.clues.map(c => `
+              <div class="clue-card">${c.icon} ${c.text}</div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderBottom() {
+      if (state.currentQuestion) {
+        const q = questions[state.currentQuestion];
+        const answer = state.answers[state.currentQuestion];
+        const isValid = answer.length >= q.minChars;
+        
+        return `
+          <div class="fixed-bottom">
+            <div class="bottom-container">
+              <button class="review-btn" onclick="showClueReview()">📋 回顾线索</button>
+              <div class="question-box">
+                <div class="question-text">${q.text}</div>
+                <div class="char-count ${isValid ? 'valid' : ''}">${answer.length}/${q.minChars} 字</div>
+                <textarea 
+                  id="answer-input" 
+                  placeholder="请输入你的回答..."
+                  oninput="handleAnswerInput('${state.currentQuestion}')"
+                >${answer}</textarea>
+              </div>
+              <button class="btn btn-primary" onclick="submitAnswer()" ${!isValid ? 'disabled' : ''}>
+                提交回答
+              </button>
+            </div>
+          </div>
+        `;
+      }
+      
+      // Stage 3: 反例测试
+      if (state.stage === 3 && !state.answers.critique) {
+        return `
+          <div class="fixed-bottom">
+            <div class="bottom-container">
+              <button class="review-btn" onclick="showClueReview()">📋 回顾线索</button>
+              <div class="question-box">
+                <div class="question-text">
+                  <strong>反例测试：</strong>另一个来到岛上的人认为：水源树只是自然老化，出水量减少是正常现象，没有特别原因，只能节约用水。你认为这个判断合理吗？请指出其逻辑中的问题（如果有），并说明理由。
+                </div>
+                <div class="char-count">${state.answers.critique.length}/20 字</div>
+                <textarea 
+                  id="answer-input" 
+                  placeholder="请分析这个观点..."
+                  oninput="handleAnswerInput('critique')"
+                >${state.answers.critique}</textarea>
+              </div>
+              <button class="btn btn-primary" onclick="submitCritique()" ${state.answers.critique.length < 20 ? 'disabled' : ''}>
+                提交分析
+              </button>
+            </div>
+          </div>
+        `;
+      }
+      
+      // Stage 4: 最终方案
+      if (state.stage === 4 && !state.answers.final) {
+        return `
+          <div class="fixed-bottom">
+            <div class="bottom-container">
+              <button class="review-btn" onclick="showClueReview()">📋 回顾线索</button>
+              <div class="question-box">
+                <div class="question-text">
+                  <strong>最终方案：</strong>请用一段话总结你的最终判断，包括原因和解决方案。
+                </div>
+                <div class="char-count">${state.answers.final.length}/50 字</div>
+                <textarea 
+                  id="answer-input" 
+                  placeholder="请总结你的方案..."
+                  oninput="handleAnswerInput('final')"
+                >${state.answers.final}</textarea>
+              </div>
+              <button class="btn btn-primary" onclick="submitFinal()" ${state.answers.final.length < 50 ? 'disabled' : ''}>
+                提交方案
+              </button>
+            </div>
+          </div>
+        `;
+      }
+      
+      return '';
+    }
+    
+    function renderCompliance() {
+      return `
+        <div class="container">
+          <div class="compliance-card">
+            <div class="compliance-icon">🏝️</div>
+            <h1 class="compliance-title">浮空岛·回响</h1>
+            <div class="compliance-desc">
+              <p>欢迎来到浮空岛。这是一次认知能力评估，你在岛上的每一个选择都会被记录和分析。</p>
+              <br>
+              <div class="compliance-item">✅ 本次评估完全在浏览器内完成，无需联网</div>
+              <div class="compliance-item">✅ 你的回答将被用于生成思维画像</div>
+              <div class="compliance-item">✅ 评估结束后可随时重新开始</div>
+              <div class="compliance-item">✅ 过程中请保持独立思考</div>
+            </div>
+            <div class="checkbox-wrapper">
+              <input type="checkbox" id="agree-checkbox">
+              <label for="agree-checkbox">我已阅读并同意上述说明</label>
+            </div>
+            <button class="btn btn-primary" onclick="startGame()" id="start-btn" disabled>
+              开始探索
+            </button>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderResult() {
+      const r = state.result;
+      const typeIcons = {
+        '星核建造者': '🔮',
+        '轨道架构师': '🛤️',
+        '引力探索者': '🌀',
+        '边界测绘师': '📐',
+        '信号接收者': '📡'
+      };
+      
+      return `
+        <div class="container">
+          <div class="result-card">
+            <div class="result-icon">${typeIcons[r.builder_type] || '✨'}</div>
+            <div class="result-type">${r.builder_type}</div>
+            <div class="result-trait">${r.core_trait}</div>
+            
+            <div class="result-desc">${r.frontend_description}</div>
+            
+            <div class="result-desc" style="background: rgba(45, 212, 191, 0.1); padding: 16px; border-radius: 12px; margin-top: 16px;">
+              <strong style="color: var(--accent);">你的思维引力</strong><br>
+              ${r.tuning_frequency}
+            </div>
+            
+            <div class="radar-section">
+              <div class="radar-title">六维思维雷达图</div>
+              <div class="radar-chart">
+                <canvas id="radar-canvas" width="280" height="280"></canvas>
+              </div>
+            </div>
+            
+            <div class="bars-section">
+              <div class="bar-item">
+                <div class="bar-label"><span>工具本位</span><span>${r.scores.tool}/10</span></div>
+                <div class="bar-track"><div class="bar-fill" style="width: ${r.scores.tool * 10}%"></div></div>
+              </div>
+              <div class="bar-item">
+                <div class="bar-label"><span>本质主义</span><span>${r.scores.essence}/10</span></div>
+                <div class="bar-track"><div class="bar-fill" style="width: ${r.scores.essence * 10}%"></div></div>
+              </div>
+              <div class="bar-item">
+                <div class="bar-label"><span>模块化</span><span>${r.scores.modular}/10</span></div>
+                <div class="bar-track"><div class="bar-fill" style="width: ${r.scores.modular * 10}%"></div></div>
+              </div>
+              <div class="bar-item">
+                <div class="bar-label"><span>结果导向</span><span>${r.scores.result}/10</span></div>
+                <div class="bar-track"><div class="bar-fill" style="width: ${r.scores.result * 10}%"></div></div>
+              </div>
+              <div class="bar-item">
+                <div class="bar-label"><span>迭代式</span><span>${r.scores.iterate}/10</span></div>
+                <div class="bar-track"><div class="bar-fill" style="width: ${r.scores.iterate * 10}%"></div></div>
+              </div>
+              <div class="bar-item">
+                <div class="bar-label"><span>边界思维</span><span>${r.scores.boundary}/10</span></div>
+                <div class="bar-track"><div class="bar-fill" style="width: ${r.scores.boundary * 10}%"></div></div>
+              </div>
+            </div>
+            
+            <button class="restart-btn" onclick="restartGame()">重新探索</button>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderDialogue() {
+      return `
+        <div class="dialogue-overlay" onclick="closeDialogueOnOverlay(event)">
+          <div class="dialogue-box">
+            <div class="dialogue-header">
+              <div class="dialogue-name">👤 守林人</div>
+              <button class="dialogue-close" onclick="closeDialogue()">×</button>
+            </div>
+            <div class="dialogue-messages" id="dialogue-messages">
+              ${state.dialogueMessages.map(m => `
+                <div class="dialogue-msg ${m.role}">${m.content}</div>
+              `).join('')}
+            </div>
+            <div class="dialogue-input-group">
+              <input type="text" class="dialogue-input" id="dialogue-input" placeholder="输入你的追问（可选）..." onkeypress="handleDialogueKeypress(event)">
+              <button class="dialogue-send" onclick="sendDialogue()">发送</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderClueReviewModal() {
+      return `
+        <div class="modal-overlay" onclick="closeClueReviewOnOverlay(event)">
+          <div class="modal-box">
+            <div class="modal-title">
+              <span>📋 已收集的线索</span>
+              <button class="modal-close" onclick="closeClueReview()">×</button>
+            </div>
+            ${state.clues.length > 0 ? `
+              <div class="clues-list">
+                ${state.clues.map(c => `
+                  <div class="clue-card">${c.icon} ${c.text}</div>
+                `).join('')}
+              </div>
+            ` : '<p style="color: var(--subtext);">暂无线索</p>'}
+          </div>
+        </div>
+      `;
+    }
+    
+    // ==================== Event Handlers ====================
+    function attachEventListeners() {
+      const checkbox = document.getElementById('agree-checkbox');
+      const startBtn = document.getElementById('start-btn');
+      
+      if (checkbox && startBtn) {
+        checkbox.addEventListener('change', () => {
+          startBtn.disabled = !checkbox.checked;
+        });
+      }
+      
+      const dialogueMessages = document.getElementById('dialogue-messages');
+      if (dialogueMessages) {
+        dialogueMessages.scrollTop = dialogueMessages.scrollHeight;
+      }
+      
+      const answerInput = document.getElementById('answer-input');
+      if (answerInput) {
+        answerInput.focus();
+      }
+    }
+    
+    function handleAnswerInput(key) {
+      const input = document.getElementById('answer-input');
+      if (input) {
+        state.answers[key] = input.value;
+        render();
+      }
+    }
+    
+    function handleDialogueKeypress(e) {
+      if (e.key === 'Enter') {
+        sendDialogue();
+      }
+    }
+    
+    function closeDialogueOnOverlay(e) {
+      if (e.target.classList.contains('dialogue-overlay')) {
+        closeDialogue();
+      }
+    }
+    
+    function closeClueReviewOnOverlay(e) {
+      if (e.target.classList.contains('modal-overlay')) {
+        closeClueReview();
+      }
+    }
+    
+    // ==================== Game Logic ====================
+    function startGame() {
+      state.phase = 'explore';
+      state.stage = 0;
+      state.clues = [];
+      state.answers = { answer1: '', answer2: '', answer3: '', answer4: '', critique: '', final: '' };
+      state.dialogueMessages = [];
+      state.isFirstDialogue = true;
+      state.currentQuestion = null;
+      state.result = null;
+      state.dialogueRetryCount = 0;
+      state.preDiscovery = false;
+      state.reviewCount = 0;
+      state.questionCount = 0;
+      render();
+    }
+    
+    function restartGame() {
+      startGame();
+    }
+    
+    function explore(action) {
+      state.questionCount++;
+      
+      const clueMap = {
+        leaf: { id: 'leaf', icon: '🌿', text: '树叶颜色从翠绿变暗绿，叶尖水珠变小，叶缘有极薄灰色粉末，手碰即散' },
+        trunk: { id: 'trunk', icon: '🌳', text: '树干有细微裂纹，以前没有' },
+        root: { id: 'root', icon: '🌱', text: '树根深扎土壤，根土交界处有灰色粉末堆积' },
+        villager: { id: 'villager', icon: '👥', text: '村民说最近夜里有低沉嗡鸣声从岛深处传来，迷雾林雾气变浓' },
+        mist: { id: 'mist', icon: '🌫️', text: '雾气比村民描述的更浓，看不到深处' },
+        knock: { id: 'knock', icon: '🔨', text: '用共鸣石敲击树干，树叶短暂恢复翠绿几秒' },
+        rhythm: { id: 'rhythm', icon: '🎵', text: '「两短一长」节奏让恢复效果持续最久' }
+      };
+      
+      // 特殊处理：记录是否主动尝试节奏
+      if (action === 'rhythm') {
+        state.preDiscovery = true;
+      }
+      
+      const clue = clueMap[action];
+      if (clue && !state.clues.some(c => c.id === clue.id)) {
+        state.clues.push(clue);
+      }
+      
+      // 阶段3：共鸣测试 - 岛志线索自动推送
+      if (state.stage === 2 && !state.clues.some(c => c.id === 'island-journal')) {
+        if (state.clues.some(c => ['knock', 'rhythm'].includes(c.id))) {
+          setTimeout(() => {
+            state.clues.push({
+              id: 'island-journal',
+              icon: '📖',
+              text: '岛志第47页：300年前水源树出现，同日迷雾林形成'
+            });
+            state.clues.push({
+              id: 'island-journal2',
+              icon: '📖',
+              text: '岛志第201页：150年前地震，水源树波动三天后自愈'
+            });
+            // 触发问答4
+            state.currentQuestion = 'answer4';
+            render();
+          }, 500);
+        }
+      }
+      
+      render();
+      
+      // 阶段0：收集完4个线索后自动触发问答1
+      if (state.stage === 0 && state.clues.length >= 4) {
+        // 问答会在 continueExplore 时触发
+      }
+    }
+    
+    function continueExplore() {
+      state.reviewCount++;
+      
+      if (state.stage === 0) {
+        // 触发问答1
+        state.currentQuestion = 'answer1';
+        state.stage = 1;
+        render();
+        return;
+      }
+      
+      if (state.stage === 1) {
+        // 完成问答2和3后进入阶段2
+        if (state.answers.answer2 && state.answers.answer3) {
+          state.currentQuestion = null;
+          state.stage = 2;
+          render();
+        } else if (!state.answers.answer2) {
+          state.currentQuestion = 'answer2';
+          render();
+        } else if (!state.answers.answer3) {
+          state.currentQuestion = 'answer3';
+          render();
+        }
+        return;
+      }
+    }
+    
+    function submitAnswer() {
+      const q = state.currentQuestion;
+      if (!q || state.answers[q].length < questions[q].minChars) return;
+      
+      state.currentQuestion = null;
+      
+      // 阶段1：如果还没回答3，自动触发
+      if (state.stage === 1 && !state.answers.answer3) {
+        state.currentQuestion = 'answer3';
+        render();
+        return;
+      }
+      
+      // 阶段1：全部回答完进入阶段2
+      if (state.stage === 1) {
+        state.stage = 2;
+      }
+      
+      render();
+    }
+    
+    function submitCritique() {
+      if (state.answers.critique.length < 20) return;
+      state.stage = 4;
+      render();
+    }
+    
+    function submitFinal() {
+      if (state.answers.final.length < 50) return;
+      
+      state.loading = true;
+      state.loadingText = '正在分析你的思维画像...';
+      render();
+      
+      callAssessAPI();
+    }
+    
+    async function callAssessAPI() {
+      try {
+        const response = await fetch('/api/assess', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            answers: {
+              answer1: state.answers.answer1,
+              answer2: state.answers.answer2,
+              answer3: state.answers.answer3,
+              answer4: state.answers.answer4,
+              critique: state.answers.critique,
+              final: state.answers.final
+            },
+            behavior: {
+              dialogueRetryCount: state.dialogueRetryCount,
+              preDiscovery: state.preDiscovery,
+              reviewCount: state.reviewCount,
+              questionCount: state.questionCount
+            }
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('API request failed');
+        }
+        
+        const data = await response.json();
+        state.result = data;
+        state.loading = false;
+        render();
+      } catch (error) {
+        console.error('Assessment error:', error);
+        // 使用默认结果
+        state.result = {
+          builder_type: '信号接收者',
+          core_trait: '信号接收中',
+          aux_trait: '频率调谐中',
+          frontend_description: '你正在接收来自宇宙的信号。有些频率已经清晰，有些还在调谐中。每种思维特质都有它的轨道——你的轨道正在成形。',
+          tuning_frequency: '继续保持探索的热情，你的思维频率正在稳定下来。',
+          scores: { tool: 5, essence: 5, modular: 5, result: 5, iterate: 5, boundary: 5, total: 30 }
+        };
+        state.loading = false;
+        render();
+      }
+    }
+    
+    // ==================== Dialogue ====================
+    async function startDialogue() {
+      if (!state.dialogueOpen) {
+        state.dialogueOpen = true;
+        state.dialogueMessages = [];
+        state.isFirstDialogue = true;
+        render();
+      }
+      
+      // 如果是首次对话，自动发送空消息触发AI
+      if (state.isFirstDialogue) {
+        await sendDialogue(true);
+      }
+    }
+    
+    function closeDialogue() {
+      state.dialogueOpen = false;
+      render();
+    }
+    
+    async function sendDialogue(isFirst = false) {
+      const input = document.getElementById('dialogue-input');
+      const message = isFirst ? '' : (input?.value || '');
+      
+      if (!isFirst && message.trim()) {
+        state.dialogueMessages.push({ role: 'user', content: message });
+        state.dialogueRetryCount++;
+        render();
+      }
+      
+      // 调用AI
+      try {
+        const response = await fetch('/api/npc-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: message,
+            isFirst: state.isFirstDialogue,
+            clues: state.clues.map(c => c.text)
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (state.isFirstDialogue) {
+          // 首次对话添加关键信息
+          state.dialogueMessages.push({ role: 'npc', content: data.reply });
+          state.clues.push({ id: 'dialogue', icon: '👤', text: '守林人说：「树根碰到了不该碰的东西」' });
+          state.isFirstDialogue = false;
+        } else {
+          // 后续对话
+          state.dialogueMessages.push({ role: 'npc', content: data.reply });
+        }
+        
+        render();
+      } catch (error) {
+        console.error('Dialogue error:', error);
+        if (state.isFirstDialogue) {
+          state.dialogueMessages.push({ role: 'npc', content: '树根碰到了不该碰的东西。' });
+          state.clues.push({ id: 'dialogue', icon: '👤', text: '守林人说：「树根碰到了不该碰的东西」' });
+          state.isFirstDialogue = false;
+        } else {
+          state.dialogueMessages.push({ role: 'npc', content: '......' });
+        }
+        render();
+      }
+    }
+    
+    // ==================== Clue Review ====================
+    function showClueReview() {
+      state.reviewModal = true;
+      state.reviewCount++;
+      render();
+    }
+    
+    function closeClueReview() {
+      state.reviewModal = false;
+      render();
+    }
+    
+    // ==================== Radar Chart ====================
+    function drawRadarChart() {
+      const canvas = document.getElementById('radar-canvas');
+      if (!canvas || !state.result) return;
+      
+      const ctx = canvas.getContext('2d');
+      const centerX = 140;
+      const centerY = 140;
+      const maxRadius = 100;
+      
+      const labels = ['工具本位', '本质主义', '模块化', '结果导向', '迭代式', '边界思维'];
+      const scores = [
+        state.result.scores.tool,
+        state.result.scores.essence,
+        state.result.scores.modular,
+        state.result.scores.result,
+        state.result.scores.iterate,
+        state.result.scores.boundary
+      ];
+      
+      // Clear
+      ctx.clearRect(0, 0, 280, 280);
+      
+      // Draw background rings
+      ctx.strokeStyle = 'rgba(51, 65, 85, 0.5)';
+      ctx.lineWidth = 1;
+      for (let i = 1; i <= 5; i++) {
+        ctx.beginPath();
+        for (let j = 0; j < 6; j++) {
+          const angle = (Math.PI * 2 / 6) * j - Math.PI / 2;
+          const r = (maxRadius / 5) * i;
+          const x = centerX + Math.cos(angle) * r;
+          const y = centerY + Math.sin(angle) * r;
+          if (j === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+      
+      // Draw axes
+      ctx.strokeStyle = 'rgba(51, 65, 85, 0.5)';
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI * 2 / 6) * i - Math.PI / 2;
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(centerX + Math.cos(angle) * maxRadius, centerY + Math.sin(angle) * maxRadius);
+        ctx.stroke();
+      }
+      
+      // Draw data polygon
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI * 2 / 6) * i - Math.PI / 2;
+        const r = (scores[i] / 10) * maxRadius;
+        const x = centerX + Math.cos(angle) * r;
+        const y = centerY + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(45, 212, 191, 0.3)';
+      ctx.fill();
+      ctx.strokeStyle = '#2dd4bf';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // Draw labels
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI * 2 / 6) * i - Math.PI / 2;
+        const x = centerX + Math.cos(angle) * (maxRadius + 20);
+        const y = centerY + Math.sin(angle) * (maxRadius + 20);
+        ctx.fillText(labels[i], x, y);
+      }
+      
+      // Draw data points
+      ctx.fillStyle = '#2dd4bf';
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI * 2 / 6) * i - Math.PI / 2;
+        const r = (scores[i] / 10) * maxRadius;
+        const x = centerX + Math.cos(angle) * r;
+        const y = centerY + Math.sin(angle) * r;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    
+    // ==================== Init ====================
+    render();
+  </script>
+</body>
+</html>
