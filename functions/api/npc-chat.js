@@ -1,6 +1,7 @@
 /**
  * /functions/api/npc-chat.js
  * 守林人 AI 对话接口（Cloudflare Pages Functions）
+ * 支持 SSE 流式返回，实现打字机效果
  */
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -9,19 +10,33 @@ export async function onRequestPost(context) {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Content-Type': 'application/json',
   };
 
   try {
     const body = await request.json();
     const { message = '', isFirst = false, clues = [] } = body;
 
-    // 若是第一次对话，直接返回固定台词
+    // 若是第一次对话，直接返回固定台词（SSE 流式）
     if (isFirst) {
-      return new Response(
-        JSON.stringify({ reply: '树根扎得太深了，碰到了不该碰的东西。' }),
-        { status: 200, headers: corsHeaders }
-      );
+      const reply = '树根扎得太深了，碰到了不该碰的东西。';
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        start(controller) {
+          const data = JSON.stringify({ reply });
+          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+          controller.close();
+        }
+      });
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'X-Accel-Buffering': 'no',
+        }
+      });
     }
 
     const apiKey = env.SILICONFLOW_API_KEY;
@@ -61,7 +76,8 @@ export async function onRequestPost(context) {
     });
 
     if (!resp.ok) {
-      return new Response(JSON.stringify({ reply: '......' }), {
+      const errorText = await resp.text();
+      return new Response(JSON.stringify({ error: `API 请求失败: ${resp.status}`, reply: '' }), {
         status: 200, headers: corsHeaders,
       });
     }
@@ -69,11 +85,27 @@ export async function onRequestPost(context) {
     const data = await resp.json();
     const reply = data?.choices?.[0]?.message?.content?.trim() || '......';
 
-    return new Response(JSON.stringify({ reply }), {
-      status: 200, headers: corsHeaders,
+    // SSE 流式返回完整 JSON
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(controller) {
+        const data = JSON.stringify({ reply });
+        controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+        controller.close();
+      }
+    });
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+      }
     });
   } catch (e) {
-    return new Response(JSON.stringify({ reply: '......' }), {
+    return new Response(JSON.stringify({ error: '服务器错误', reply: '' }), {
       status: 200, headers: corsHeaders,
     });
   }

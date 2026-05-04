@@ -701,6 +701,7 @@
       
       if (state.phase === 'compliance') {
         app.innerHTML = renderCompliance();
+        attachEventListeners();
         return;
       }
       
@@ -1242,17 +1243,10 @@
         render();
       } catch (error) {
         console.error('Assessment error:', error);
-        // 使用默认结果
-        state.result = {
-          builder_type: '信号接收者',
-          core_trait: '信号接收中',
-          aux_trait: '频率调谐中',
-          frontend_description: '你正在接收来自宇宙的信号。有些频率已经清晰，有些还在调谐中。每种思维特质都有它的轨道——你的轨道正在成形。',
-          tuning_frequency: '继续保持探索的热情，你的思维频率正在稳定下来。',
-          scores: { tool: 5, essence: 5, modular: 5, result: 5, iterate: 5, boundary: 5, total: 30 }
-        };
         state.loading = false;
         render();
+        alert('评分服务暂时不可用，请检查网络连接后重试');
+        return;
       }
     }
     
@@ -1286,7 +1280,18 @@
         render();
       }
       
-      // 调用AI
+      // 先渲染出空的 NPC 消息占位
+      const npcMsgIndex = state.dialogueMessages.length;
+      state.dialogueMessages.push({ role: 'npc', content: '' });
+      render();
+      
+      // 滚动到底部
+      setTimeout(() => {
+        const box = document.getElementById('dialogue-messages');
+        if (box) box.scrollTop = box.scrollHeight;
+      }, 50);
+      
+      // 流式读取 SSE 响应
       try {
         const response = await fetch('/api/npc-chat', {
           method: 'POST',
@@ -1298,30 +1303,84 @@
           })
         });
         
-        const data = await response.json();
-        
-        if (state.isFirstDialogue) {
-          // 首次对话添加关键信息
-          state.dialogueMessages.push({ role: 'npc', content: data.reply });
-          state.clues.push({ id: 'dialogue', icon: '👤', text: '守林人说：「树根碰到了不该碰的东西」' });
-          state.isFirstDialogue = false;
-        } else {
-          // 后续对话
-          state.dialogueMessages.push({ role: 'npc', content: data.reply });
+        if (!response.ok) {
+          throw new Error(`网络错误: ${response.status}`);
         }
         
-        render();
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let done = false;
+        
+        while (!done) {
+          const { value, done: readerDone } = await reader.read();
+          done = readerDone;
+          
+          if (value) {
+            const chunk = decoder.decode(value, { stream: !done });
+            buffer += chunk;
+            
+            // 解析 SSE 行：data: {...}\n\n
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const json = JSON.parse(line.slice(6));
+                  if (json.error) {
+                    throw new Error(json.error);
+                  }
+                  if (json.reply !== undefined) {
+                    // 逐字更新，模拟打字机效果
+                    const msgEl = document.querySelectorAll('.dialogue-msg.npc')[npcMsgIndex];
+                    if (msgEl) {
+                      const currentText = state.dialogueMessages[npcMsgIndex].content;
+                      const newText = currentText + json.reply;
+                      state.dialogueMessages[npcMsgIndex].content = newText;
+                      msgEl.textContent = newText;
+                      msgEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                  }
+                } catch (parseErr) {
+                  // ignore parse errors for incomplete JSON
+                }
+              }
+            }
+          }
+        }
+        
+        // 处理剩余 buffer
+        if (buffer.trim().startsWith('data: ')) {
+          try {
+            const json = JSON.parse(buffer.trim().slice(6));
+            if (json.reply !== undefined) {
+              state.dialogueMessages[npcMsgIndex].content += json.reply;
+              const msgEl = document.querySelectorAll('.dialogue-msg.npc')[npcMsgIndex];
+              if (msgEl) msgEl.textContent = state.dialogueMessages[npcMsgIndex].content;
+            }
+          } catch (e) { /* ignore */ }
+        }
+        
       } catch (error) {
         console.error('Dialogue error:', error);
-        if (state.isFirstDialogue) {
-          state.dialogueMessages.push({ role: 'npc', content: '树根碰到了不该碰的东西。' });
-          state.clues.push({ id: 'dialogue', icon: '👤', text: '守林人说：「树根碰到了不该碰的东西」' });
-          state.isFirstDialogue = false;
-        } else {
-          state.dialogueMessages.push({ role: 'npc', content: '......' });
-        }
+        alert('网络连接失败，请检查网络后重试');
+        // 移除失败的占位消息
+        state.dialogueMessages.splice(npcMsgIndex, 1);
         render();
+        return;
       }
+      
+      // 首次对话：补全线索
+      if (state.isFirstDialogue) {
+        const finalContent = state.dialogueMessages[npcMsgIndex].content;
+        if (!state.clues.some(c => c.id === 'dialogue')) {
+          state.clues.push({ id: 'dialogue', icon: '👤', text: `守林人说：「${finalContent}」` });
+        }
+        state.isFirstDialogue = false;
+      }
+      
+      render();
     }
     
     // ==================== Clue Review ====================
